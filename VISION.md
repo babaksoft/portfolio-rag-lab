@@ -15,12 +15,34 @@ from evidence rather than fashion.
 
 - Provide a public, useful, and trustworthy portfolio-question answering
   experience.
+- Support multi-turn conversations in which follow-up questions can refer to
+  earlier questions, answers, projects, and retrieved evidence.
 - Require retrieved evidence for factual claims about the portfolio.
 - Expose citations and abstain when evidence is insufficient.
 - Compare increasingly capable retrieval configurations on the same evaluation
   dataset.
 - Deploy the least complex approach that meets measured quality requirements.
 - Remain understandable to a developer learning production AI engineering.
+
+## Conversation requirements
+
+The final assistant is a multi-turn conversational product, not a collection of
+isolated single-turn searches. A user must be able to ask natural follow-ups
+such as:
+
+- "How did you evaluate it?"
+- "Compare that project with the other RAG system."
+- "What would you change if latency mattered more?"
+
+Conversation history provides context for resolving references and intent, but
+it is not evidence. Every factual portfolio claim still requires current
+retrieved evidence and citations. The system should keep conversation identity,
+message history, retrieval traces, and cited evidence explicit rather than
+hiding them in an unstructured prompt.
+
+Multi-turn behavior must eventually be evaluated with conversation-level cases,
+including reference resolution, topic changes, follow-up retrieval, citation
+continuity, context limits, and recovery from an incorrect assumption.
 
 ## Retrieval progression
 
