@@ -60,7 +60,7 @@ repository without referring to conversation history.
 
 ## Step 3 — Configure the Python and quality foundation
 
-**Status:** Pending
+**Status:** Complete
 
 - Create `pyproject.toml` for Python 3.12 and package `portfolio_rag`.
 - Use `uv` for dependency and environment management.

@@ -7,6 +7,18 @@ This repository is currently in its pre-implementation bootstrap stage. See
 [`VISION.md`](VISION.md) for the project charter and [`PLAN.md`](PLAN.md) for the
 staged delivery plan.
 
+## Local development
+
+Install Python 3.12 and [`uv`](https://docs.astral.sh/uv/), then run the complete
+local check suite:
+
+```sh
+./scripts/quality.sh
+```
+
+The command synchronizes the locked environment, checks formatting and linting
+with Ruff, checks types with mypy, and runs the pytest suite.
+
 ## License
 
 This project is available under the [MIT License](LICENSE).

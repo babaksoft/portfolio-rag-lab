@@ -10,8 +10,7 @@
   Import them from that boundary outside the package and from their defining
   module within it.
 - Use Ruff for formatting and linting, mypy for type checking, and pytest for
-  tests. Run the repository quality command defined in `pyproject.toml` once it
-  exists.
+  tests. Run all local checks with `./scripts/quality.sh`.
 - Keep `master` as the default branch. Before handing off a change, run the
   configured quality command when available and always run `git diff --check`.
 
