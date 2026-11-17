@@ -91,7 +91,7 @@ trigger; the same decision is not maintained independently in several places.
 
 ## Step 5 — Record the initial architecture contracts
 
-**Status:** Pending
+**Status:** Complete
 
 - Describe the Streamlit, API-client, FastAPI, PostgreSQL/pgvector, and external
   provider boundaries.

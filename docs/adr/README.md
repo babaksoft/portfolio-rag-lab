@@ -10,6 +10,7 @@ stage records.
 | --- | --- | --- | --- |
 | [0001](0001-modular-application-shape.md) | Adopt a modular application with explicit UI and API boundaries | Accepted | 2026-11-17 |
 | [0002](0002-framework-neutral-domain-boundary.md) | Keep the domain boundary framework-neutral | Accepted | 2026-11-17 |
+| [0003](0003-co-locate-ui-and-api-in-one-ecs-task.md) | Co-locate the UI and API in one ECS task | Accepted | 2026-11-17 |
 
 ## Convention
 
