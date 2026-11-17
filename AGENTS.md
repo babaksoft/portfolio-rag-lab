@@ -9,6 +9,8 @@
 - Export public architecture symbols from their owning package's `__init__.py`.
   Import them from that boundary outside the package and from their defining
   module within it.
+- Put inbound adapters under `api/` and `ui/`. Put outbound adapters under
+  `infrastructure/`, organized by capability.
 - Use Ruff for formatting and linting, mypy for type checking, and pytest for
   tests. Run all local checks with `./scripts/quality.sh`.
 - Keep `master` as the default branch. Before handing off a change, run the
@@ -38,12 +40,19 @@
   persisted outside process memory, also document storage meaning, nullability
   or default behavior, lifecycle, and units or format wherever those facts are
   not obvious from the type and name.
+- Implement each application use case as a narrow, verb-led `*Service` class
+  under `application/services/`, in a matching `snake_case` module, with one
+  public `execute()` operation. Do not group unrelated operations in broad
+  services.
+- Name domain behavior by its role, such as `*Policy`, `*Strategy`, or
+  `*Validator`. Use `*Service` only for domain behavior that belongs to no
+  entity or value object.
 
 ## Persistence conventions
 
-- Put persistence code under `src/portfolio_rag/db/`, mapped models under
-  `db/models/`, and adapters under `db/repositories/`. Group closely related
-  models in a suitably named module.
+- Put persistence code under `src/portfolio_rag/infrastructure/db/`, mapped
+  models under `db/models/`, and adapters under `db/repositories/`. Group
+  closely related models in a suitably named module.
 - Prefix database-backed repository classes with `Db` (for example,
   `DbIdentityRepository`); keep domain repository protocols unprefixed (for
   example, `IdentityRepository`).

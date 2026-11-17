@@ -77,7 +77,7 @@ checking, and the empty/minimal test suite all succeed from documented commands.
 
 ## Step 4 — Establish the living-document and ADR system
 
-**Status:** Pending
+**Status:** Complete
 
 - Add `DESIGN.md` for durable architecture and boundary explanations.
 - Create a concise ADR directory, template, and index.

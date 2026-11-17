@@ -5,7 +5,9 @@ retrieval, with measured quality, latency, cost, and reliability tradeoffs.
 
 This repository is currently in its pre-implementation bootstrap stage. See
 [`VISION.md`](VISION.md) for the project charter and [`PLAN.md`](PLAN.md) for the
-staged delivery plan.
+staged delivery plan. Current architecture is described in
+[`DESIGN.md`](DESIGN.md), with consequential decisions indexed in
+[`docs/adr/`](docs/adr/README.md).
 
 ## Local development
 
