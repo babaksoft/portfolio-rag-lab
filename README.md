@@ -7,3 +7,7 @@ This repository is currently in its pre-implementation bootstrap stage. See
 [`VISION.md`](VISION.md) for the project charter and [`PLAN.md`](PLAN.md) for the
 staged delivery plan.
 
+## License
+
+This project is available under the [MIT License](LICENSE).
+

@@ -41,7 +41,7 @@ Git whitespace validation passes, and the working branch is `master`.
 
 ## Step 2 — Establish repository and coding-agent conventions
 
-**Status:** Pending
+**Status:** Complete
 
 - Add a concise root `AGENTS.md` containing only durable, non-obvious commands,
   constraints, and conventions.
