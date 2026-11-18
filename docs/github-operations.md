@@ -13,9 +13,9 @@ workflow grants only read access to repository contents, does not persist the
 checkout credential, pins third-party actions to full commit SHAs, and pins the
 installed `uv` version.
 
-The workflow's `Python quality checks` job should be required by branch
-protection when protection is introduced. Dependabot checks the `uv` and
-GitHub Actions ecosystems weekly, groups routine updates by ecosystem, and
+The workflow's `Python quality checks` job is required by the default-branch
+ruleset and must report from the GitHub Actions app. Dependabot checks the `uv`
+and GitHub Actions ecosystems weekly, groups routine updates by ecosystem, and
 limits each ecosystem to three open version-update pull requests. Dependency
 updates remain visible for manual review; automatic merging is not enabled.
 
@@ -28,6 +28,25 @@ Dependabot security updates enabled. These settings complement the committed
 Dependabot version-update schedule: alerts identify vulnerable dependencies,
 and security updates may open focused remediation pull requests outside the
 weekly routine-update grouping.
+
+## Default-branch and merge policy
+
+The active `Protect master` ruleset targets the default branch and has no bypass
+actors. Changes must arrive through pull requests, but zero approving reviews
+are required for the current solo-maintainer workflow. All review conversations
+must be resolved, and the strict `Python quality checks` status must pass
+against the latest `master` before merge.
+
+The ruleset blocks branch deletion, force pushes, and merge commits. Repository
+merge settings allow only squash merges, automatically delete merged head
+branches, and keep automatic merging disabled. Each focused pull request
+therefore becomes one linear commit on `master` after explicit review and merge.
+
+Required commit signing remains deliberately deferred. Reconsider it after
+local Git signing is configured and both a normal pull request and a Dependabot
+pull request have demonstrated verified commits throughout the merge path.
+Enabling the rule earlier could block otherwise valid work containing an
+unsigned commit, even when the pull request would be squash-merged.
 
 ## Later AWS delivery through OIDC
 
