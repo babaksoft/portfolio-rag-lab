@@ -21,6 +21,10 @@ local check suite:
 The command synchronizes the locked environment, checks formatting and linting
 with Ruff, checks types with mypy, and runs the pytest suite.
 
+Pull requests run the same checks in GitHub Actions. Repository automation,
+dependency maintenance, and the planned AWS OIDC trust boundary are documented
+in [`docs/github-operations.md`](docs/github-operations.md).
+
 ## License
 
 This project is available under the [MIT License](LICENSE).
