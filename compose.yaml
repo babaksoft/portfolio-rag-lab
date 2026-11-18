@@ -1,0 +1,29 @@
+name: portfolio-rag
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    image: portfolio-rag-api:local
+    init: true
+    ports:
+      - "127.0.0.1:8000:8000"
+    stop_grace_period: 10s
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/ui.Dockerfile
+    image: portfolio-rag-ui:local
+    init: true
+    environment:
+      PORTFOLIO_RAG_UI_API_BASE_URL: http://api:8000
+      PORTFOLIO_RAG_UI_API_TIMEOUT_SECONDS: "5"
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8501:8501"
+    stop_grace_period: 10s
+

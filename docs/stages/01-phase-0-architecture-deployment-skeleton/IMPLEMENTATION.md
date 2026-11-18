@@ -33,6 +33,29 @@ durable design documents rather than repeating them here.
   HTTP client and running FastAPI process and displayed the placeholder with
   its correlation identifier preserved at the API boundary.
 
+### 2026-11-18 — Slice 2 containerized local runtime
+
+- Added separate multi-stage API and UI images. Each installs only locked
+  runtime dependencies, contains the installed application rather than a source
+  bind mount, and runs as the dedicated numeric user `10001`.
+- Added Compose orchestration with loopback-only published ports, dependency-
+  ordered startup, image-level health checks, and a ten-second stop grace
+  period. The UI reaches the API through `PORTFOLIO_RAG_UI_API_BASE_URL` at the
+  Compose service address, preserving the configuration boundary intended for
+  task-local ECS networking.
+- Added a minimized build context and a bounded smoke command that builds and
+  starts the runtime, waits for health, verifies both runtime identities, calls
+  the backend through the UI-owned typed client, and stops both containers.
+- Selected Debian slim Python images for compatibility with the locked Python
+  dependencies and copied a version-pinned `uv` binary only into build stages;
+  neither build tooling nor development dependencies are present at runtime.
+- A clean local build and `uv run python scripts/container_smoke.py` passed.
+  Both image
+  health checks became healthy, the task-local-style client call returned the
+  placeholder, both containers ran as UID `10001`, no local `.env` or build
+  tool was present, and both containers stopped within the configured grace
+  period.
+
 ## Deviations
 
 None.
@@ -50,5 +73,8 @@ None.
 
 ## Follow-up work
 
-- Slice 2 will package the two verified process commands as separate local
-  containers without changing the application boundary.
+- When image build time becomes material in CI or deployment, separate the
+  locked third-party dependency layer from the first-party package install and
+  add a BuildKit cache mount for uv downloads. Docker's standard layer cache is
+  sufficient for the intentionally small walking skeleton, so that complexity
+  is deferred until measurements justify it.
