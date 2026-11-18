@@ -150,4 +150,3 @@ The project succeeds when it can publicly demonstrate, with reproducible
 evaluation evidence, where deterministic retrieval is sufficient, where
 bounded agentic retrieval improves outcomes, and what each improvement costs in
 latency, money, and operational complexity.
-

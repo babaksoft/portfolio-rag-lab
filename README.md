@@ -3,9 +3,9 @@
 An evaluated progression from deterministic retrieval to bounded agentic
 retrieval, with measured quality, latency, cost, and reliability tradeoffs.
 
-This repository is currently in its pre-implementation bootstrap stage. See
-[`VISION.md`](VISION.md) for the project charter and [`PLAN.md`](PLAN.md) for the
-staged delivery plan. Current architecture is described in
+Repository bootstrap is complete, and Phase 0 is planned for implementation.
+See [`VISION.md`](VISION.md) for the project charter and [`PLAN.md`](PLAN.md) for
+the staged delivery plan. Current architecture is described in
 [`DESIGN.md`](DESIGN.md), with consequential decisions indexed in
 [`docs/adr/`](docs/adr/README.md).
 
@@ -28,4 +28,3 @@ in [`docs/github-operations.md`](docs/github-operations.md).
 ## License
 
 This project is available under the [MIT License](LICENSE).
-

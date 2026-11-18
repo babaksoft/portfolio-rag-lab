@@ -145,7 +145,10 @@ dependency changes remain visible and manually reviewed.
 
 ## Step 8 — Run the pre-implementation readiness review
 
-**Status:** Pending
+**Status:** Complete
+
+Results and remaining risks are recorded in
+[`IMPLEMENTATION.md`](IMPLEMENTATION.md).
 
 - Run every documented local quality command.
 - Check for secrets and accidental donor-repository artifacts.
