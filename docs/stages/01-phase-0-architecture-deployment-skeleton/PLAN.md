@@ -38,7 +38,7 @@ verified locally but cannot be marked complete.
 
 ## Slice 1 — Local walking skeleton
 
-**Status:** Not started
+**Status:** Complete (2026-11-18)
 
 ### Outcome
 

@@ -9,7 +9,14 @@ description = "An evaluated progression from deterministic to bounded agentic re
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = "MIT"
-dependencies = []
+dependencies = [
+  "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "streamlit>=1.41,<2",
+  "uvicorn>=0.34,<1",
+]
 
 [dependency-groups]
 dev = [
