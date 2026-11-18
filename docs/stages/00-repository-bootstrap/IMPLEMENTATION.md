@@ -27,6 +27,16 @@ and the ADRs.
   a fresh checkout must run the UI and API placeholder path, handle bounded
   failures, and pass automated checks without database or cloud access.
 
+### 2026-11-18 — Default-branch protection
+
+- Added an active, no-bypass `Protect master` ruleset requiring pull requests,
+  resolved review conversations, a current successful `Python quality checks`
+  result from GitHub Actions, and linear history. The ruleset blocks deletion
+  and force pushes and requires zero approvals for the solo-maintainer workflow.
+- Configured squash-only merging, automatic merged-branch deletion, and no
+  automatic merging. Required commit signing remains deferred until local and
+  Dependabot signing behavior has been verified.
+
 ## Deviations
 
 None.
@@ -40,9 +50,6 @@ None.
 - Bootstrap secret review is pattern-based. GitHub secret scanning and push
   protection remain the ongoing controls; no claim is made that pattern
   matching proves the absence of every possible credential.
-- The quality workflow reports on pull requests and `master`, but branch
-  protection does not yet require its status check. Direct pushes can therefore
-  bypass review until protection is introduced.
 - The current test suite validates only the package foundation. End-to-end,
   failure-path, container, database, and cloud checks belong to their planned
   Phase 0 slices.
@@ -54,5 +61,3 @@ None.
 
 - Begin Phase 0 with Slice 1 only; do not pull database, container, cloud,
   authentication, retrieval, or provider work into the walking-skeleton change.
-- Introduce branch protection when the repository workflow is ready to require
-  pull requests and the `Python quality checks` status.
