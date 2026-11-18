@@ -40,6 +40,10 @@
   persisted outside process memory, also document storage meaning, nullability
   or default behavior, lifecycle, and units or format wherever those facts are
   not obvious from the type and name.
+- Use Pydantic models consistently for structured domain and application values
+  and for boundary contracts. Make value-like models immutable when mutation is
+  not part of their contract. Use a dataclass only when a concrete performance
+  or interoperability requirement justifies the inconsistency.
 - Implement each application use case as a narrow, verb-led `*Service` class
   under `application/services/`, in a matching `snake_case` module, with one
   public `execute()` operation. Do not group unrelated operations in broad
