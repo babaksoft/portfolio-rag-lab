@@ -9,3 +9,6 @@ uv run ruff format --check .
 uv run ruff check .
 uv run mypy
 uv run pytest
+
+echo
+echo "All tools and tests are green."

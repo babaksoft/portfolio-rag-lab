@@ -5,7 +5,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ApiSettings(BaseSettings):
-    """Environment-backed API process settings."""
+    """Environment-backed API process settings.
+
+    Attributes:
+        service_name:
+            Stable service identity used by the API process.
+    """
 
     model_config = SettingsConfigDict(
         env_prefix="PORTFOLIO_RAG_API_",

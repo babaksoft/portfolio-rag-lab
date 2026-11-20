@@ -20,7 +20,16 @@ class _MessagePayload(BaseModel):
 
 
 class MessageResult(BaseModel):
-    """Validated message result exposed to Streamlit rendering code."""
+    """Validated message result exposed to Streamlit rendering code.
+
+    Attributes:
+        answer:
+            User-visible answer returned by the backend.
+        is_placeholder:
+            Whether the answer is the non-factual Phase 0 placeholder.
+        correlation_id:
+            Opaque identifier tracing the request across processes.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -64,14 +73,17 @@ class PortfolioApiClient:
         """Ask the backend to answer one message.
 
         Args:
-            message: User message to send to the backend.
-            correlation_id: Optional caller-provided trace identifier.
+            message:
+                User message to send to the backend.
+            correlation_id:
+                Optional caller-provided trace identifier.
 
         Returns:
             Validated task-oriented response.
 
         Raises:
-            ApiClientError: If the backend is unavailable or violates its contract.
+            ApiClientError:
+                If the backend is unavailable or violates its contract.
         """
         request_correlation_id = correlation_id or str(uuid4())
         payload = _MessagePayload(message=message)

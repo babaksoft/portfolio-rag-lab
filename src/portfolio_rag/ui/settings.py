@@ -5,7 +5,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class UiSettings(BaseSettings):
-    """Environment-backed UI process settings."""
+    """Environment-backed UI process settings.
+
+    Attributes:
+        api_base_url:
+            Base HTTP URL of the FastAPI backend used by the UI process.
+        api_timeout_seconds:
+            Maximum time in seconds allowed for one backend API request.
+    """
 
     model_config = SettingsConfigDict(
         env_prefix="PORTFOLIO_RAG_UI_",

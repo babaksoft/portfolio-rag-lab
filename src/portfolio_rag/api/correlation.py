@@ -18,6 +18,22 @@ def get_correlation_id() -> str:
     return _correlation_id.get()
 
 
+async def propagate_correlation_id(
+    request: Request, call_next: _NextHandler
+) -> Response:
+    """Make one safe correlation identifier available across the request path."""
+    correlation_id = _resolve_correlation_id(request)
+    token = _correlation_id.set(correlation_id)
+
+    try:
+        response = await call_next(request)
+    finally:
+        _correlation_id.reset(token)
+
+    response.headers[CORRELATION_HEADER] = correlation_id
+    return response
+
+
 def _resolve_correlation_id(request: Request) -> str:
     """Return a bounded incoming correlation identifier or create one."""
     candidate = request.headers.get(CORRELATION_HEADER, "").strip()
@@ -28,18 +44,5 @@ def _resolve_correlation_id(request: Request) -> str:
         and candidate.isprintable()
     ):
         return candidate
+
     return str(uuid4())
-
-
-async def propagate_correlation_id(
-    request: Request, call_next: _NextHandler
-) -> Response:
-    """Make one safe correlation identifier available across the request path."""
-    correlation_id = _resolve_correlation_id(request)
-    token = _correlation_id.set(correlation_id)
-    try:
-        response = await call_next(request)
-    finally:
-        _correlation_id.reset(token)
-    response.headers[CORRELATION_HEADER] = correlation_id
-    return response

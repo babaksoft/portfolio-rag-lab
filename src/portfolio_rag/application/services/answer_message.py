@@ -11,9 +11,16 @@ PLACEHOLDER_ANSWER = (
 
 
 class AnswerMessageResult(BaseModel):
-    """Result returned by the placeholder message use case."""
+    """Result returned by the placeholder message use case.
 
-    model_config = ConfigDict(frozen=True)
+    Attributes:
+        answer:
+            User-visible response text.
+        is_placeholder:
+            Whether the response contains no factual portfolio answer.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     answer: str = Field(description="User-visible response text.")
     is_placeholder: Literal[True] = Field(
@@ -28,13 +35,15 @@ class AnswerMessageService:
         """Return the explicitly labeled Phase 0 response.
 
         Args:
-            message: Validated non-empty user message.
+            message:
+                Validated non-empty user message.
 
         Returns:
             The safe placeholder result.
 
         Raises:
-            ValueError: If the application boundary receives an empty message.
+            ValueError:
+                If the application boundary receives an empty message.
         """
         if not message.strip():
             raise ValueError("message must not be empty")
