@@ -67,7 +67,9 @@ class HealthResponse(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    status: Literal["ok"] = Field(description="Whether the process can serve traffic.")
+    status: Literal["ok", "unavailable"] = Field(
+        description="Whether the process can serve traffic."
+    )
     service: str = Field(description="Stable identity of the responding process.")
 
 

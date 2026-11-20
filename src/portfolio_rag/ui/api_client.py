@@ -14,7 +14,7 @@ CORRELATION_HEADER = "X-Correlation-ID"
 class _MessagePayload(BaseModel):
     """Serialized backend request payload."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     message: str = Field(description="User message sent to the backend.")
 

@@ -10,10 +10,13 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = "MIT"
 dependencies = [
+  "alembic>=1.14,<2",
+  "asyncpg>=0.30,<1",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
   "pydantic>=2.10,<3",
   "pydantic-settings>=2.7,<3",
+  "sqlalchemy[asyncio]>=2.0,<3",
   "streamlit>=1.41,<2",
   "uvicorn>=0.34,<1",
 ]
@@ -58,3 +61,6 @@ addopts = [
 testpaths = ["tests"]
 xfail_strict = true
 filterwarnings = ["error"]
+markers = [
+  "integration: requires the isolated PostgreSQL service configured by the caller",
+]

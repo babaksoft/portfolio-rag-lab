@@ -19,6 +19,7 @@ class UiSettings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        frozen=True,
     )
 
     api_base_url: AnyHttpUrl = Field(

@@ -4,11 +4,11 @@ An evaluated progression from deterministic retrieval to bounded agentic
 retrieval, with measured quality, latency, cost, and reliability tradeoffs.
 
 The first Phase 0 slices provide a local Streamlit-to-FastAPI walking skeleton
-that runs either as native development processes or as separate containers.
-See [`VISION.md`](VISION.md) for the project charter and [`PLAN.md`](PLAN.md) for
-the staged delivery plan. The current architecture is described in
-[`DESIGN.md`](DESIGN.md), with consequential decisions indexed in
-[`docs/adr/`](docs/adr/README.md).
+backed by PostgreSQL/pgvector. It runs either as native development processes
+or as separate containers. See [`VISION.md`](VISION.md) for the project charter
+and [`PLAN.md`](PLAN.md) for the staged delivery plan. The current architecture
+is described in [`DESIGN.md`](DESIGN.md), with consequential decisions indexed
+in [`docs/adr/`](docs/adr/README.md).
 
 ## Local development
 
@@ -21,6 +21,14 @@ uv sync --locked
 
 Configuration has safe local defaults. To customize them, copy
 `.env.example` to `.env` and edit the local file.
+
+Start the local PostgreSQL/pgvector dependency and apply all migrations before
+starting native application processes:
+
+```sh
+docker compose up -d --wait db
+uv run alembic upgrade head
+```
 
 Start the API in one terminal:
 
@@ -52,7 +60,8 @@ with Ruff, checks types with mypy, and runs the pytest suite.
 
 ## Containerized runtime
 
-Install Docker with the Compose plugin, then build and start both containers:
+Install Docker with the Compose plugin, then build and start the UI, API, and
+database. The one-shot migration container must complete before the API starts:
 
 ```sh
 docker compose up --build --wait
@@ -61,7 +70,29 @@ docker compose up --build --wait
 Open <http://127.0.0.1:8501>. The UI container reaches the API at its Compose
 service address, matching the task-local configuration boundary planned for
 ECS. The API is also exposed locally at <http://127.0.0.1:8000> for health and
-boundary checks. Both published ports bind only to the loopback interface.
+boundary checks. PostgreSQL is exposed at `127.0.0.1:5432` for native tools.
+All published ports bind only to the loopback interface. If a default port is
+occupied, set `PORTFOLIO_RAG_DATABASE_PORT`, `PORTFOLIO_RAG_API_PORT`, or
+`PORTFOLIO_RAG_UI_PORT` for the Compose command.
+
+Alembic migrations live in the repository-root `alembic/` directory. Common
+migration operations are:
+
+```sh
+uv run alembic current
+uv run alembic revision -m "describe the schema change"
+uv run alembic upgrade head
+uv run alembic downgrade -1
+```
+
+Review generated revisions before applying them. Application startup never
+changes schema. To run the PostgreSQL integration tests against the local
+Compose database after migration:
+
+```sh
+PORTFOLIO_RAG_TEST_DATABASE_URL=postgresql+asyncpg://portfolio_rag:portfolio_rag@127.0.0.1:5432/portfolio_rag \
+  uv run pytest -m integration
+```
 
 Stop the runtime within its configured grace period with:
 
@@ -70,7 +101,8 @@ docker compose down --timeout 10
 ```
 
 To build, start, health-check, exercise the UI container's typed API client,
-verify both processes run as non-root users, and stop the runtime, run:
+verify both application processes run as non-root users, and stop the runtime,
+run:
 
 ```sh
 uv run python scripts/container_smoke.py

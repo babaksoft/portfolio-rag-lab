@@ -112,6 +112,9 @@ web, persistence, cloud, or AI orchestration frameworks. See
   identifiers, nullability, and transaction failures at the boundary.
 - Schema migrations are the source of truth for persistent structure once the
   database slice introduces them. Application startup must not mutate schema.
+- SQLAlchemy provides asynchronous connection, session, and transaction
+  infrastructure. Alembic owns migration generation and execution from the
+  repository-root `alembic/` directory.
 
 ### External providers
 
@@ -214,7 +217,7 @@ The following choices do not block the first implementation slice:
 
 | Decision | Resolve when |
 | --- | --- |
-| ORM, migration, settings, and HTTP-client libraries | The Phase 0 slice first requiring each capability |
+| Settings and HTTP-client libraries | The Phase 0 slice first requiring each capability |
 | Database schema, vector dimensions, and index type | The database and baseline-retrieval slices |
 | Exact API payloads, error codes, and versioning mechanism | The use case introducing each endpoint |
 | Cognito token propagation and load-balancer authentication flow | The Phase 0 authentication slice |

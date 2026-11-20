@@ -1,14 +1,48 @@
 name: portfolio-rag
 
 services:
+  db:
+    image: pgvector/pgvector:0.8.7-pg17-trixie
+    environment:
+      POSTGRES_DB: portfolio_rag
+      POSTGRES_PASSWORD: portfolio_rag
+      POSTGRES_USER: portfolio_rag
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portfolio_rag -d portfolio_rag"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    ports:
+      - "127.0.0.1:${PORTFOLIO_RAG_DATABASE_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    stop_grace_period: 10s
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    image: portfolio-rag-api:local
+    environment:
+      PORTFOLIO_RAG_API_DATABASE_URL: postgresql+asyncpg://portfolio_rag:portfolio_rag@db:5432/portfolio_rag
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+
   api:
     build:
       context: .
       dockerfile: docker/api.Dockerfile
     image: portfolio-rag-api:local
     init: true
+    environment:
+      PORTFOLIO_RAG_API_DATABASE_URL: postgresql+asyncpg://portfolio_rag:portfolio_rag@db:5432/portfolio_rag
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${PORTFOLIO_RAG_API_PORT:-8000}:8000"
     stop_grace_period: 10s
 
   ui:
@@ -24,6 +58,9 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "127.0.0.1:8501:8501"
+      - "127.0.0.1:${PORTFOLIO_RAG_UI_PORT:-8501}:8501"
     stop_grace_period: 10s
+
+volumes:
+  postgres-data:
 

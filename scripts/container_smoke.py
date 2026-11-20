@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and verify the local two-container runtime."""
+"""Build and verify the composed local runtime."""
 
 import subprocess
 import time

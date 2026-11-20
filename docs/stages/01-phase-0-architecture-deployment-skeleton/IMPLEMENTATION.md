@@ -56,6 +56,31 @@ durable design documents rather than repeating them here.
   tool was present, and both containers stopped within the configured grace
   period.
 
+### 2026-11-20 — Slice 3 PostgreSQL and pgvector foundation
+
+- Selected SQLAlchemy 2 with its asynchronous engine and session support,
+  asyncpg as the PostgreSQL driver, and Alembic for migration generation and
+  management. Migrations live in the conventional repository-root `alembic/`
+  directory and are never run implicitly at application startup.
+- Added a lazy process-owned connection pool, an explicit async session factory
+  for future transaction scopes, bounded connection attempts, pool disposal at
+  shutdown, and secret-wrapped database URL configuration.
+- Added a pinned PostgreSQL 17/pgvector 0.8.7 Compose service and a one-shot
+  migration service. The API starts only after migrations succeed, while host
+  ports remain loopback-only and overrideable for isolated runs.
+- Added the initial reversible migration, which enables only the `vector`
+  extension. No application tables, mapped persistence models, repositories,
+  embedding dimensions, or indexes were introduced ahead of their use cases.
+- Readiness now performs a safe, bounded database query and returns HTTP 503
+  without infrastructure detail when PostgreSQL is unavailable. Liveness
+  remains dependency-free.
+- A fresh isolated Compose database migrated successfully and exposed the
+  pgvector extension. The final pinned image reported PostgreSQL 17.12 and
+  pgvector 0.8.7. The integration test passed; downgrade removed the extension,
+  and reapplying migrations restored it. With PostgreSQL stopped, readiness
+  returned 503 while liveness returned 200; readiness recovered to 200 after
+  restart.
+
 ## Deviations
 
 None.
@@ -66,8 +91,6 @@ None.
 
 ## Deliberate compromises
 
-- Readiness currently matches liveness because Slice 1 has no external runtime
-  dependency. The database slice will add its first dependency check.
 - The UI shows only the current exchange; durable conversation identity and
   history remain deferred until a use case requires them.
 
