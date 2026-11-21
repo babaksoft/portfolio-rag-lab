@@ -75,7 +75,10 @@
     {
       "Effect": "Allow",
       "Action": "ecs:DescribeServiceDeployments",
-      "Resource": "arn:${aws_partition}:ecs:${aws_region}:${account_id}:service-deployment/${name_prefix}/${name_prefix}/*"
+      "Resource": [
+        "arn:${aws_partition}:ecs:${aws_region}:${account_id}:service/${name_prefix}/${name_prefix}",
+        "arn:${aws_partition}:ecs:${aws_region}:${account_id}:service-deployment/${name_prefix}/${name_prefix}/*"
+      ]
     },
     {
       "Effect": "Allow",
