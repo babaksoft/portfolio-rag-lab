@@ -76,8 +76,9 @@ and manages three roles:
   family, and update only the one production service. It trusts only this
   repository's `production` GitHub Environment.
 
-Every trust policy requires the `sts.amazonaws.com` audience. Jobs request
-`id-token: write` only when they assume one of these roles. The plan gate
+Every trust policy requires the `sts.amazonaws.com` audience and GitHub's
+immutable owner-and-repository-ID subject prefix. Jobs request `id-token: write`
+only when they assume one of these roles. The plan gate
 accepts exactly two ECS task-definition replacements and one ECS service
 update; any network, IAM, database, DNS, or other infrastructure change fails
 closed and must follow the separately reviewed manual Terraform path.

@@ -85,12 +85,14 @@ versions state, and has Terraform destruction protection. Keep the bootstrap
 state in a protected operator location; it contains no application secrets but
 is required to manage the bucket.
 
-Review `github_repository` before applying bootstrap changes. The plan and
-publish roles trust only the `master` ref in that exact repository. The deploy
-role trusts only its `production` GitHub Environment, and all three roles
-require the GitHub token's audience to be `sts.amazonaws.com`. Apply bootstrap
-changes only through the administrative path above; never create access keys as
-a fallback for an unavailable OIDC role.
+Review `github_repository` and `github_oidc_subject_prefix` before applying
+bootstrap changes. Read the immutable prefix from GitHub's repository OIDC
+customization endpoint; it includes both owner and repository numeric IDs. The
+plan and publish roles trust only the `master` ref beneath that exact prefix.
+The deploy role trusts only its `production` GitHub Environment, and all three
+roles require the GitHub token's audience to be `sts.amazonaws.com`. Apply
+bootstrap changes only through the administrative path above; never create
+access keys as a fallback for an unavailable OIDC role.
 
 ### Configure the Terraform operator permission set
 
