@@ -27,3 +27,12 @@ output "terraform_operator_policy_json" {
   description = "Rendered inline policy to attach to the IAM Identity Center Terraform operator permission set."
   value       = local.terraform_operator_policy
 }
+
+output "github_actions_role_arns" {
+  description = "Short-lived OIDC role ARNs used by the GitHub delivery workflow."
+  value = {
+    deploy  = aws_iam_role.github_deploy.arn
+    plan    = aws_iam_role.github_plan.arn
+    publish = aws_iam_role.github_publish.arn
+  }
+}

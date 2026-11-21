@@ -1,0 +1,53 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "acm:DescribeCertificate",
+        "acm:ListTagsForCertificate",
+        "ec2:Describe*",
+        "ecr:Describe*",
+        "ecr:GetLifecyclePolicy",
+        "ecr:GetRepositoryPolicy",
+        "ecr:ListImages",
+        "ecr:ListTagsForResource",
+        "ecs:Describe*",
+        "ecs:List*",
+        "elasticloadbalancing:Describe*",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListPolicyVersions",
+        "iam:ListRolePolicies",
+        "logs:Describe*",
+        "logs:ListTagsForResource",
+        "rds:Describe*",
+        "rds:ListTagsForResource",
+        "route53:GetHostedZone",
+        "route53:ListResourceRecordSets",
+        "route53:ListTagsForResource",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetResourcePolicy",
+        "secretsmanager:ListSecretVersionIds",
+        "sts:GetCallerIdentity"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation",
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:${aws_partition}:s3:::${state_bucket_name}"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:${aws_partition}:s3:::${state_bucket_name}/${state_key_prefix}/*"
+    }
+  ]
+}
