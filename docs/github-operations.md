@@ -64,7 +64,8 @@ protected `production` environment before applying that exact artifact. All
 third-party actions are pinned to full commit SHAs. No AWS access key is stored
 in GitHub.
 
-The bootstrap Terraform root manages GitHub's OIDC provider and three roles:
+The bootstrap Terraform root references the account-level GitHub OIDC provider
+and manages three roles:
 
 - `portfolio-rag-github-publish` can publish only the two application ECR
   repositories and trusts only workflows whose ref is `master`;

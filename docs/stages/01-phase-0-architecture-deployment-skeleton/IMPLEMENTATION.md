@@ -18,8 +18,9 @@ durable design documents rather than repeating them here.
 - Restricted the automated plan to the two ECS task-definition replacements
   and one ECS service update. Any infrastructure change fails the workflow and
   remains on the explicit manual plan/apply path.
-- Added Terraform-managed GitHub OIDC trust with separate read-only planning,
-  repository-scoped ECR publishing, and protected-environment deployment roles.
+- Added Terraform-managed GitHub OIDC trust roles with separate read-only
+  planning, repository-scoped ECR publishing, and protected-environment
+  deployment permissions. The roles reference the account-level OIDC provider.
   Trust policies bind both the `sts.amazonaws.com` audience and exact repository
   subject; no long-lived AWS credential is required.
 - Added pre-deployment migration registration for the new immutable API image,

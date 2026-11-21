@@ -56,9 +56,11 @@ Manager, so the password does not enter Terraform configuration or outputs.
 The state bucket is intentionally a separate local-state configuration because
 an S3 backend cannot create its own bucket. The bootstrap also owns two
 protected customer-managed IAM boundaries: one caps the Terraform operator and
-one is mandatory on every ECS execution or task role. It owns the GitHub OIDC
-provider and the plan, image-publish, and protected deployment roles because the
-production operator cannot modify its own guardrail or trust path.
+one is mandatory on every ECS execution or task role. It references the shared
+account-level GitHub OIDC provider and owns the plan, image-publish, and
+protected deployment roles because the production operator cannot modify its
+own guardrail or trust path. The shared provider must expose the
+`sts.amazonaws.com` audience before these roles are applied.
 
 Copy `bootstrap/terraform.tfvars.example` to an ignored `.tfvars` file, review
 the bootstrap plan, and apply it with the temporary administrative SSO profile
