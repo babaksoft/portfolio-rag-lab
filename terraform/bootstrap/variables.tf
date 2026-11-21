@@ -64,3 +64,14 @@ variable "application_hostname" {
     error_message = "application_hostname must be a valid lower-case DNS hostname."
   }
 }
+
+variable "github_repository" {
+  description = "GitHub owner and repository allowed to exchange Actions OIDC tokens for project roles."
+  type        = string
+  default     = "babaksoft/portfolio-rag-lab"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
+    error_message = "github_repository must use the owner/repository format."
+  }
+}

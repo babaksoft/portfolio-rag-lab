@@ -1,13 +1,13 @@
 # AWS foundation
 
-This directory owns the Terraform-managed Phase 0 AWS foundation and initial
-manual deployment. It does not create Cognito resources or a CI/CD delivery
-workflow; those belong to later slices.
+This directory owns the Terraform-managed Phase 0 AWS foundation, application
+deployment, and GitHub Actions OIDC roles. It does not create Cognito resources.
 
 ## Prerequisites and inputs
 
-Install Terraform 1.10 or newer (but earlier than 2.0) and AWS CLI v2. Use an
-AWS identity authorized to manage only the resources in the reviewed plan.
+Install Terraform 1.10 or newer (but earlier than 2.0), AWS CLI v2, Docker, and
+`jq`. Use an AWS identity authorized to manage only the resources in the
+reviewed plan.
 The selected production home region is `us-east-1`; both Terraform roots set it
 explicitly instead of inheriting a developer's AWS CLI default. Changing regions
 after resources exist is a migration and requires a separately reviewed plan.
@@ -56,8 +56,9 @@ Manager, so the password does not enter Terraform configuration or outputs.
 The state bucket is intentionally a separate local-state configuration because
 an S3 backend cannot create its own bucket. The bootstrap also owns two
 protected customer-managed IAM boundaries: one caps the Terraform operator and
-one is mandatory on every ECS execution or task role. The production operator
-cannot modify either guardrail.
+one is mandatory on every ECS execution or task role. It owns the GitHub OIDC
+provider and the plan, image-publish, and protected deployment roles because the
+production operator cannot modify its own guardrail or trust path.
 
 Copy `bootstrap/terraform.tfvars.example` to an ignored `.tfvars` file, review
 the bootstrap plan, and apply it with the temporary administrative SSO profile
@@ -81,6 +82,13 @@ The bucket blocks public access, rejects non-TLS requests, encrypts objects,
 versions state, and has Terraform destruction protection. Keep the bootstrap
 state in a protected operator location; it contains no application secrets but
 is required to manage the bucket.
+
+Review `github_repository` before applying bootstrap changes. The plan and
+publish roles trust only the `master` ref in that exact repository. The deploy
+role trusts only its `production` GitHub Environment, and all three roles
+require the GitHub token's audience to be `sts.amazonaws.com`. Apply bootstrap
+changes only through the administrative path above; never create access keys as
+a fallback for an unavailable OIDC role.
 
 ### Configure the Terraform operator permission set
 
@@ -258,6 +266,25 @@ apply the exact approved plan. Alembic revisions must remain backward-compatible
 with the currently running task because the migration precedes replacement.
 The ECS deployment circuit breaker rolls back a task that does not become
 healthy, but it cannot undo a database migration.
+
+After the Slice 6 bootstrap roles and protected GitHub Environment are active,
+use the manually dispatched `Deploy production` workflow for routine releases.
+Dispatch it from `master`; optionally provide another full commit SHA already
+reachable from `master` to roll back. The workflow reuses images when that SHA
+has already been published, rejects plans containing anything beyond the two
+task-definition replacements and service update, and requires environment
+approval before applying the saved plan. It runs
+`./scripts/aws_run_migration.sh IMMUTABLE_TAG` so the migration task uses the
+new API image rather than the previously deployed task definition.
+
+The workflow calls `./scripts/aws_apply_deployment.sh` to retain the prior
+service task definition, apply the saved plan, wait for stability, and compare
+both running image digests with ECR. A failed apply or digest check restores the
+prior task definition. The ECS deployment circuit breaker remains the first
+line of rollback for a replacement that cannot become healthy.
+Because this emergency service restoration intentionally creates Terraform
+drift, inspect the failed run and review the next saved plan before another
+dispatch; do not update state by hand.
 
 ### Deployment smoke test
 

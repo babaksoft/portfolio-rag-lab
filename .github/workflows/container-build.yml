@@ -1,0 +1,32 @@
+name: Container build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build runtime images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build API image
+        run: docker build --pull --file docker/api.Dockerfile --tag portfolio-rag-api:ci .
+
+      - name: Build UI image
+        run: docker build --pull --file docker/ui.Dockerfile --tag portfolio-rag-ui:ci .
