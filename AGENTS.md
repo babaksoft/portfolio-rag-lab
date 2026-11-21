@@ -40,10 +40,14 @@
   persisted outside process memory, also document storage meaning, nullability
   or default behavior, lifecycle, and units or format wherever those facts are
   not obvious from the type and name.
+- Give every public Pydantic value class an `Attributes:` section documenting
+  its fields so callers get useful IntelliSense outside the defining module.
+  Internal models whose names begin with an underscore may omit it.
 - Use Pydantic models consistently for structured domain and application values
-  and for boundary contracts. Make value-like models immutable when mutation is
-  not part of their contract. Use a dataclass only when a concrete performance
-  or interoperability requirement justifies the inconsistency.
+  and for boundary contracts. Prefer `ConfigDict(frozen=True, extra="forbid")`
+  for value-like models unless anticipated mutation or extra attributes are
+  part of the contract. Use a dataclass only when a concrete performance or
+  interoperability requirement justifies the inconsistency.
 - Implement each application use case as a narrow, verb-led `*Service` class
   under `application/services/`, in a matching `snake_case` module, with one
   public `execute()` operation. Do not group unrelated operations in broad
@@ -60,6 +64,10 @@
 - Prefix database-backed repository classes with `Db` (for example,
   `DbIdentityRepository`); keep domain repository protocols unprefixed (for
   example, `IdentityRepository`).
+- Name domain values naturally (for example, `Identity`) and suffix their
+  persistence models with `Model` (for example, `IdentityModel`). This and the
+  repository naming rule must allow both boundary types to be imported without
+  redundant aliases.
 - Give variable-length string columns purpose-specific maximum lengths,
   preferably multiples of 16, and match user-authored domain validation maxima
   to them. Exact bounded internal values may use their known maximum length.

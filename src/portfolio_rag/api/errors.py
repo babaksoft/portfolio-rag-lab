@@ -10,6 +10,7 @@ from portfolio_rag.api.models import ErrorResponse
 async def handle_validation_error(request: Request, exc: Exception) -> JSONResponse:
     """Translate validation details into a stable user-safe response."""
     del request, exc
+
     error = ErrorResponse(
         code="invalid_request",
         message="The request payload is invalid.",

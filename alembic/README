@@ -1,0 +1,5 @@
+Database migrations for Portfolio Retrieval Lab.
+
+Create revisions with `uv run alembic revision -m "description"` and review all
+generated operations before applying them. Application startup never creates or
+changes schema.

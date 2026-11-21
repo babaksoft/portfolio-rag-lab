@@ -83,7 +83,7 @@ database or cloud access.
 
 ## Slice 2 — Containerized local runtime
 
-**Status:** Not started
+**Status:** Complete (2026-11-18)
 
 ### Outcome
 
@@ -127,7 +127,7 @@ health checks pass, and the behavior matches the non-containerized path.
 
 ## Slice 3 — PostgreSQL and pgvector foundation
 
-**Status:** Not started
+**Status:** Complete (2026-11-20)
 
 ### Outcome
 
@@ -136,9 +136,11 @@ real readiness dependency without leaking persistence types into the core.
 
 ### Scope boundary
 
-Choose the data-access and migration libraries, add local PostgreSQL with
-pgvector, establish connection and transaction configuration, and enable the
-extension through migrations. Add only schema required by Phase 0 behavior;
+Use SQLAlchemy's asynchronous support for data access and Alembic for migration
+generation and management. Keep migrations in the repository-root `alembic/`
+directory. Add local PostgreSQL with pgvector, establish connection and
+transaction configuration, and enable the extension through migrations. Add
+only schema required by Phase 0 behavior;
 identity-specific persistence may wait for Slice 7. Do not add portfolio tables,
 embeddings, vector indexes, ingestion, or retrieval behavior.
 
@@ -173,7 +175,8 @@ run the integration suite, and demonstrate correct liveness/readiness behavior.
 
 ## Slice 4 — Terraform-managed AWS foundation
 
-**Status:** Not started
+**Status:** Complete (2026-11-21; foundation applied and post-apply health and
+convergence checks passed)
 
 ### Outcome
 
@@ -220,7 +223,7 @@ the applied foundation is healthy with no unplanned public or privileged path.
 
 ## Slice 5 — Initial AWS deployment
 
-**Status:** Not started
+**Status:** Complete (2026-11-21)
 
 ### Outcome
 

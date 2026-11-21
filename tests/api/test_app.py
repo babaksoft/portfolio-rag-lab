@@ -5,14 +5,25 @@ import httpx
 from portfolio_rag.api import create_app
 
 
+class _ReadinessProbe:
+    def __init__(self, ready: bool) -> None:
+        self._ready = ready
+
+    async def is_ready(self) -> bool:
+        return self._ready
+
+
 async def _request(
     method: str,
     path: str,
     *,
     json: dict[str, str] | None = None,
     headers: dict[str, str] | None = None,
+    database_ready: bool = True,
 ) -> httpx.Response:
-    transport = httpx.ASGITransport(app=create_app())
+    transport = httpx.ASGITransport(
+        app=create_app(readiness_probe=_ReadinessProbe(database_ready))
+    )
     async with httpx.AsyncClient(
         transport=transport, base_url="http://testserver"
     ) as client:
@@ -56,3 +67,20 @@ def test_health_endpoints_report_process_health() -> None:
         response = asyncio.run(_request("GET", path))
         assert response.status_code == 200
         assert response.json() == {"status": "ok", "service": "portfolio-rag-api"}
+
+
+def test_failed_readiness_does_not_change_liveness() -> None:
+    readiness_response = asyncio.run(
+        _request("GET", "/health/ready", database_ready=False)
+    )
+    liveness_response = asyncio.run(
+        _request("GET", "/health/live", database_ready=False)
+    )
+
+    assert readiness_response.status_code == 503
+    assert readiness_response.json() == {
+        "status": "unavailable",
+        "service": "portfolio-rag-api",
+    }
+    assert liveness_response.status_code == 200
+    assert liveness_response.json()["status"] == "ok"
