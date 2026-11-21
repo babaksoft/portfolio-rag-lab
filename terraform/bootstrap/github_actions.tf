@@ -23,10 +23,8 @@ locals {
   })
 }
 
-resource "aws_iam_openid_connect_provider" "github_actions" {
-  url             = local.github_oidc_url
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = []
+data "aws_iam_openid_connect_provider" "github_actions" {
+  url = local.github_oidc_url
 }
 
 data "aws_iam_policy_document" "github_master_assume_role" {
@@ -36,7 +34,7 @@ data "aws_iam_policy_document" "github_master_assume_role" {
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github_actions.arn]
+      identifiers = [data.aws_iam_openid_connect_provider.github_actions.arn]
     }
 
     condition {
@@ -86,7 +84,7 @@ data "aws_iam_policy_document" "github_deploy_assume_role" {
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github_actions.arn]
+      identifiers = [data.aws_iam_openid_connect_provider.github_actions.arn]
     }
 
     condition {
