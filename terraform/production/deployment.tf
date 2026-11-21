@@ -96,6 +96,7 @@ locals {
 
 resource "aws_ecs_task_definition" "application" {
   family                   = local.name_prefix
+  skip_destroy             = true
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = 512
@@ -184,6 +185,7 @@ resource "aws_ecs_task_definition" "application" {
 
 resource "aws_ecs_task_definition" "migration" {
   family                   = "${local.name_prefix}-migration"
+  skip_destroy             = true
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = 256
