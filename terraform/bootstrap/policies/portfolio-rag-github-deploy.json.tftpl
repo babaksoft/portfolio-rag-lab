@@ -43,6 +43,19 @@
     },
     {
       "Effect": "Allow",
+      "Action": "ecs:TagResource",
+      "Resource": [
+        "arn:${aws_partition}:ecs:${aws_region}:${account_id}:task-definition/${name_prefix}:*",
+        "arn:${aws_partition}:ecs:${aws_region}:${account_id}:task-definition/${name_prefix}-migration:*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "portfolio-rag-lab"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
       "Action": "ecs:RunTask",
       "Resource": "arn:${aws_partition}:ecs:${aws_region}:${account_id}:task-definition/${name_prefix}-migration:*",
       "Condition": {
