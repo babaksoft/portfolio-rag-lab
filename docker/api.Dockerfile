@@ -2,7 +2,7 @@
 
 FROM ghcr.io/astral-sh/uv:0.12.7 AS uv
 
-FROM python:3.12.8-slim-bookworm AS builder
+FROM python:3.12.16-slim-bookworm AS builder
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
@@ -15,7 +15,7 @@ COPY src ./src
 
 RUN uv sync --locked --no-dev --no-editable
 
-FROM python:3.12.8-slim-bookworm AS runtime
+FROM python:3.12.16-slim-bookworm AS runtime
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \

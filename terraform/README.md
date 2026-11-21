@@ -1,8 +1,8 @@
 # AWS foundation
 
-This directory owns the Terraform-managed Phase 0 AWS foundation. It does not
-create an ECS task definition or service, load balancer, Cognito resources, or
-delivery workflow; those belong to later slices.
+This directory owns the Terraform-managed Phase 0 AWS foundation and initial
+manual deployment. It does not create Cognito resources or a CI/CD delivery
+workflow; those belong to later slices.
 
 ## Prerequisites and inputs
 
@@ -172,8 +172,10 @@ terraform -chdir=terraform/production show foundation.tfplan
 
 Before approval, verify the account and region and review:
 
-- no task, load balancer, database, or secret is publicly reachable;
-- the only public ingress is TCP 443 on the unused future edge group;
+- only the application load balancer is publicly reachable, on TCP 443; no
+  task, database, or secret has a public network path;
+- the edge group forwards only to Streamlit on TCP 8501 and does not expose the
+  FastAPI port;
 - application ingress is edge-group to TCP 8501 and database ingress is
   application-group to TCP 5432;
 - IAM has no broad action except the resource-independent ECR authorization
@@ -212,18 +214,99 @@ terraform -chdir=terraform/production apply foundation.tfplan
 
 Afterward, confirm ACM reports `ISSUED`, RDS reports `available` and is not
 public, and the route tables and effective security-group rules match the plan.
-The application secret is created empty; populate it through an approved
-out-of-band command only when a later slice defines a concrete secret contract.
+The application secret remains empty until a later slice defines a concrete
+secret contract. Database credentials come directly from the RDS-managed
+secret and must not be copied into it.
+
+## Publish and deploy the application
+
+The API and UI repositories reject mutable tag overwrites. Choose a unique tag,
+normally the full source revision, authenticate the restricted AWS profile, and
+publish both images:
+
+```sh
+export AWS_PROFILE=portfolio-rag
+aws sso login --profile "$AWS_PROFILE"
+./scripts/aws_publish_images.sh "$(git rev-parse HEAD)"
+```
+
+Put that exact tag in both `api_image_tag` and `ui_image_tag` in the ignored
+`production.tfvars`. Never use `latest`. Review ECR scan findings before
+deploying; a critical finding blocks deployment until it is understood and
+resolved.
+
+The first deployment is deliberately staged so the ECS service cannot accept
+traffic before the database migration succeeds:
+
+1. Update and apply the bootstrap root first, using the administrative profile
+   and the explicit approval process above. Reprovision the restricted
+   permission set so its expanded ECS and load-balancer permissions take
+   effect.
+2. Create and review a production saved plan with
+   `-var=service_desired_count=0`. Apply that exact plan only after approval.
+   This creates the load balancer and task definitions while holding the
+   service at zero tasks.
+3. Run `./scripts/aws_run_migration.sh`. It starts the private one-off Fargate
+   migration task, waits for it to stop, and fails unless Alembic exits zero.
+4. Create a new saved plan from the normal inputs (desired count defaults to
+   one), confirm the only expected service change is `0 -> 1`, and apply that
+   exact plan only after approval.
+
+For later deployments, publish a new immutable tag, update both image-tag
+inputs, review the saved production plan, run the migration command, and then
+apply the exact approved plan. Alembic revisions must remain backward-compatible
+with the currently running task because the migration precedes replacement.
+The ECS deployment circuit breaker rolls back a task that does not become
+healthy, but it cannot undo a database migration.
+
+### Deployment smoke test
+
+After ECS reaches steady state, perform all of these checks:
+
+```sh
+curl --fail --silent --show-error \
+  "https://portfolio-rag.babaksoft.dev/_stcore/health"
+aws ecs describe-services \
+  --region us-east-1 \
+  --cluster portfolio-rag-production \
+  --services portfolio-rag-production
+aws logs tail /ecs/portfolio-rag-production/api --region us-east-1 --since 10m
+aws logs tail /ecs/portfolio-rag-production/ui --region us-east-1 --since 10m
+```
+
+Open `https://portfolio-rag.babaksoft.dev`, submit a message, and confirm the
+explicit placeholder response appears. Confirm the service reports one running
+and one desired task, the target group reports one healthy target, API logs show
+successful readiness checks, neither log stream contains a database password,
+and the task has no public IP. Inspect the effective security groups: public
+ingress must be only edge TCP 443, edge-to-task traffic only TCP 8501, and
+task-to-database traffic only TCP 5432.
+
+To test desired-count recovery, stop the current task with `aws ecs stop-task`,
+then wait for the service to return to one healthy running task. This is an
+intentional brief outage in the Phase 0 single-task topology and requires
+explicit approval before running against the live environment.
+
+### Rollback
+
+Keep the prior immutable API and UI tags. To exercise rollback after deploying
+a second version, restore both prior tags in `production.tfvars`, create and
+review a saved plan, and apply that exact plan after approval. Wait for steady
+state and repeat the complete smoke test. Do not attempt application rollback
+when a non-backward-compatible migration has run; use the migration recovery
+procedure appropriate to that reviewed revision first.
 
 ## Cost and recovery assumptions
 
 The default deliberately trades availability for Phase 0 cost: one NAT gateway,
 one `db.t4g.micro` single-AZ RDS instance, 20 GiB gp3 storage with autoscaling to
-100 GiB, and one ECS cluster with no running tasks. NAT hourly/data processing,
-RDS, Route 53, CloudWatch ingestion/storage, ECR storage, public IPv4, and data
-transfer can incur charges even when the application is idle. Confirm current
-regional pricing with the AWS Pricing Calculator before approval. Container
-Insights is enabled for operational visibility and can add CloudWatch cost.
+100 GiB, one public Application Load Balancer, and one continuously desired
+0.5-vCPU/1-GiB Fargate task after deployment. NAT hourly/data processing, RDS,
+Fargate, load-balancer capacity, Route 53, CloudWatch ingestion/storage, ECR
+storage, public IPv4, and data transfer can incur charges even when the
+application is idle. Confirm current regional pricing with the AWS Pricing
+Calculator before approval. Container Insights is enabled for operational
+visibility and can add CloudWatch cost.
 
 The single NAT gateway is an Availability Zone dependency, and the database has
 no standby. RDS backups and a final snapshot improve recoverability but do not

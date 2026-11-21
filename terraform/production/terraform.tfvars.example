@@ -8,3 +8,8 @@ database_instance_class      = "db.t4g.micro"
 database_deletion_protection = true
 vpc_cidr                     = "10.20.0.0/16"
 ecs_task_permissions_boundary_arn = "arn:aws:iam::509399640122:policy/portfolio-rag/PortfolioRagEcsTaskBoundary"
+
+# Publish both images with scripts/aws_publish_images.sh before planning. Use a
+# unique revision tag; ECR rejects overwriting an existing tag.
+api_image_tag = "replace-with-immutable-revision"
+ui_image_tag  = "replace-with-immutable-revision"

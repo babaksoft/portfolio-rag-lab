@@ -2,7 +2,6 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "ReadFoundationMetadata",
       "Effect": "Allow",
       "Action": [
         "acm:DescribeCertificate",
@@ -10,12 +9,14 @@
         "acm:ListTagsForCertificate",
         "ec2:Describe*",
         "ecr:Describe*",
+        "ecr:GetAuthorizationToken",
         "ecr:GetLifecyclePolicy",
         "ecr:GetRepositoryPolicy",
         "ecr:ListImages",
         "ecr:ListTagsForResource",
         "ecs:Describe*",
         "ecs:List*",
+        "elasticloadbalancing:Describe*",
         "iam:GetPolicy",
         "iam:GetPolicyVersion",
         "iam:GetRole",
@@ -42,7 +43,6 @@
       "Resource": "*"
     },
     {
-      "Sid": "UseTerraformState",
       "Effect": "Allow",
       "Action": [
         "s3:GetBucketLocation",
@@ -51,7 +51,6 @@
       "Resource": "arn:${aws_partition}:s3:::${state_bucket_name}"
     },
     {
-      "Sid": "ReadWriteTerraformStateObjects",
       "Effect": "Allow",
       "Action": [
         "s3:DeleteObject",
@@ -61,7 +60,6 @@
       "Resource": "arn:${aws_partition}:s3:::${state_bucket_name}/${state_key_prefix}/*"
     },
     {
-      "Sid": "ManageRegionalFoundation",
       "Effect": "Allow",
       "Action": [
         "ec2:AllocateAddress",
@@ -102,6 +100,25 @@
         "ecr:PutLifecyclePolicy",
         "ecr:TagResource",
         "ecr:UntagResource",
+        "ecs:CreateService",
+        "ecs:DeleteService",
+        "ecs:DeregisterTaskDefinition",
+        "ecs:RegisterTaskDefinition",
+        "ecs:RunTask",
+        "ecs:StopTask",
+        "ecs:UpdateService",
+        "elasticloadbalancing:AddTags",
+        "elasticloadbalancing:CreateListener",
+        "elasticloadbalancing:CreateLoadBalancer",
+        "elasticloadbalancing:CreateTargetGroup",
+        "elasticloadbalancing:DeleteListener",
+        "elasticloadbalancing:DeleteLoadBalancer",
+        "elasticloadbalancing:DeleteTargetGroup",
+        "elasticloadbalancing:ModifyListener",
+        "elasticloadbalancing:ModifyLoadBalancerAttributes",
+        "elasticloadbalancing:ModifyTargetGroup",
+        "elasticloadbalancing:ModifyTargetGroupAttributes",
+        "elasticloadbalancing:RemoveTags",
         "ecs:CreateCluster",
         "ecs:DeleteCluster",
         "ecs:PutClusterCapacityProviders",
@@ -136,7 +153,20 @@
       }
     },
     {
-      "Sid": "RequestProjectCertificate",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:CompleteLayerUpload",
+        "ecr:InitiateLayerUpload",
+        "ecr:PutImage",
+        "ecr:UploadLayerPart"
+      ],
+      "Resource": [
+        "arn:${aws_partition}:ecr:${aws_region}:${account_id}:repository/portfolio-rag-api",
+        "arn:${aws_partition}:ecr:${aws_region}:${account_id}:repository/portfolio-rag-ui"
+      ]
+    },
+    {
       "Effect": "Allow",
       "Action": "acm:RequestCertificate",
       "Resource": "*",
@@ -151,7 +181,6 @@
       }
     },
     {
-      "Sid": "DescribeSecretsManagerManagedKey",
       "Effect": "Allow",
       "Action": "kms:DescribeKey",
       "Resource": "arn:${aws_partition}:kms:${aws_region}:${account_id}:key/*",
@@ -162,7 +191,6 @@
       }
     },
     {
-      "Sid": "ManageProjectCertificate",
       "Effect": "Allow",
       "Action": [
         "acm:AddTagsToCertificate",
@@ -177,7 +205,6 @@
       }
     },
     {
-      "Sid": "ManageProjectDnsRecords",
       "Effect": "Allow",
       "Action": "route53:ChangeResourceRecordSets",
       "Resource": "arn:${aws_partition}:route53:::hostedzone/${hosted_zone_id}",
@@ -191,13 +218,11 @@
       }
     },
     {
-      "Sid": "TagProjectHostedZone",
       "Effect": "Allow",
       "Action": "route53:ChangeTagsForResource",
       "Resource": "arn:${aws_partition}:route53:::hostedzone/${hosted_zone_id}"
     },
     {
-      "Sid": "CreateBoundedProjectRoles",
       "Effect": "Allow",
       "Action": "iam:CreateRole",
       "Resource": "arn:${aws_partition}:iam::${account_id}:role/${name_prefix}-*",
@@ -211,7 +236,6 @@
       }
     },
     {
-      "Sid": "ManageBoundedProjectRoles",
       "Effect": "Allow",
       "Action": [
         "iam:DeleteRole",
@@ -224,7 +248,6 @@
       "Resource": "arn:${aws_partition}:iam::${account_id}:role/${name_prefix}-*"
     },
     {
-      "Sid": "PassProjectRolesOnlyToEcs",
       "Effect": "Allow",
       "Action": "iam:PassRole",
       "Resource": "arn:${aws_partition}:iam::${account_id}:role/${name_prefix}-*",
@@ -235,7 +258,6 @@
       }
     },
     {
-      "Sid": "CreateRequiredServiceLinkedRoles",
       "Effect": "Allow",
       "Action": "iam:CreateServiceLinkedRole",
       "Resource": "*",

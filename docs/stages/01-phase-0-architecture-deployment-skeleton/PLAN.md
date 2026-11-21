@@ -223,7 +223,7 @@ the applied foundation is healthy with no unplanned public or privileged path.
 
 ## Slice 5 — Initial AWS deployment
 
-**Status:** Not started
+**Status:** Complete (2026-11-21)
 
 ### Outcome
 

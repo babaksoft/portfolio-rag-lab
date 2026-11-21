@@ -70,3 +70,34 @@ variable "ecs_task_permissions_boundary_arn" {
     error_message = "ecs_task_permissions_boundary_arn must name the bootstrap-managed Portfolio RAG task boundary."
   }
 }
+
+variable "api_image_tag" {
+  description = "Immutable API image tag already published to the managed ECR repository."
+  type        = string
+
+  validation {
+    condition     = var.api_image_tag != "latest" && can(regex("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", var.api_image_tag))
+    error_message = "api_image_tag must be a valid immutable Docker tag other than latest."
+  }
+}
+
+variable "ui_image_tag" {
+  description = "Immutable UI image tag already published to the managed ECR repository."
+  type        = string
+
+  validation {
+    condition     = var.ui_image_tag != "latest" && can(regex("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", var.ui_image_tag))
+    error_message = "ui_image_tag must be a valid immutable Docker tag other than latest."
+  }
+}
+
+variable "service_desired_count" {
+  description = "Desired ECS task count; use zero only for the documented first-deployment migration stage."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = contains([0, 1], var.service_desired_count)
+    error_message = "service_desired_count must be zero or one during Phase 0."
+  }
+}

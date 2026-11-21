@@ -33,6 +33,11 @@ output "application_subnet_ids" {
   value       = values(aws_subnet.application)[*].id
 }
 
+output "application_subnet_ids_csv" {
+  description = "Private application subnet IDs formatted for the manual ECS migration command."
+  value       = join(",", values(aws_subnet.application)[*].id)
+}
+
 output "public_subnet_ids" {
   description = "Public subnet IDs for the future application load balancer."
   value       = values(aws_subnet.public)[*].id
@@ -69,4 +74,24 @@ output "ecr_repository_urls" {
     api = aws_ecr_repository.api.repository_url
     ui  = aws_ecr_repository.ui.repository_url
   }
+}
+
+output "application_url" {
+  description = "Public TLS entry point for the deployed Streamlit UI."
+  value       = "https://${var.application_hostname}"
+}
+
+output "application_task_definition_arn" {
+  description = "Task definition used by the one-task application service."
+  value       = aws_ecs_task_definition.application.arn
+}
+
+output "migration_task_definition_arn" {
+  description = "One-off task definition used to apply database migrations before deployment."
+  value       = aws_ecs_task_definition.migration.arn
+}
+
+output "ecs_service_name" {
+  description = "ECS service restored to desired count one after task failure."
+  value       = aws_ecs_service.application.name
 }

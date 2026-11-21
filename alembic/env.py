@@ -15,7 +15,7 @@ if config.config_file_name is not None:
 
 config.set_main_option(
     "sqlalchemy.url",
-    ApiSettings().database_url.get_secret_value().replace("%", "%%"),
+    ApiSettings().resolved_database_url().replace("%", "%%"),
 )
 target_metadata = None
 

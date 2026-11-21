@@ -6,6 +6,58 @@ durable design documents rather than repeating them here.
 
 ## Results
 
+### 2026-11-21 — Slice 5 initial AWS deployment
+
+- Added the Terraform-managed public Application Load Balancer, TLS listener,
+  alias record, Streamlit target group, two-container application task,
+  one-count ECS service, and controlled one-off migration task. Only TCP 443 is
+  public; the load balancer reaches only Streamlit on TCP 8501, and the UI
+  reaches FastAPI over the shared task-local loopback interface.
+- Configured ECS deployment rollback, container health dependencies, private
+  task networking, no public task IP, and RDS-backed API readiness. The RDS
+  managed secret remains the only database credential source: ECS injects its
+  username and password JSON fields, while the API safely assembles the
+  SQLAlchemy URL without copying credentials into Terraform state.
+- Added commands for publishing immutable API and UI image tags and running a
+  migration task whose exit code is checked before service deployment. Added a
+  staged first-deployment procedure, smoke checklist, task-restoration test,
+  second-version deployment, and rollback procedure to the Terraform runbook.
+- Expanded the bootstrap-managed Terraform operator boundary only for the ECS
+  task/service, migration/recovery task, repository-scoped image publication,
+  and Elastic Load Balancing operations introduced by this slice. AWS Access
+  Analyzer reported zero findings for the rendered policy.
+- Applied the explicitly approved operator-boundary update in place and
+  reprovisioned the matching Identity Center permission set. The staged
+  zero-task production plan contained seven creates, no changes, and no
+  destroys; applying it created the task definitions, service, load balancer,
+  TLS listener, target group, and DNS alias without starting application
+  traffic.
+- Published and deployed immutable `slice5-20261121-2beab6c970fb-v2` images
+  after upgrading both exact runtime base-image pins to Python 3.12.16. ECR
+  reported no critical findings; the API digest is
+  `sha256:ac4522cd5fa78841a3807c1ac718403ca1f1770652f6397913e6ee9a7f89eba2`
+  and the UI digest is
+  `sha256:e76a42c2535ff20f21ace563e39114879ed2627e1aade9bb06a646a525249111`.
+- The private migration task exited zero and applied the pgvector migration.
+  The activation plan changed only desired count from zero to one. TLS health,
+  the healthy ALB target, one healthy two-container task, repeated
+  database-backed API readiness probes, exact image digests, private task ENI,
+  and effective directional security-group rules all matched the design.
+  A private one-off task exercised the real UI API client over task-local
+  loopback and both containers exited zero.
+- Stopping the sole service task caused the expected brief outage; ECS restored
+  a different healthy task and returned to one running and one desired. A
+  second immutable `v3` tag deployed successfully, after which the documented
+  rollback restored `v2` on task-definition revision 3. Final TLS, container,
+  service, and target health checks passed, and a production refresh reported
+  no drift. A manual browser submission at the live entry point
+  `https://portfolio-rag.babaksoft.dev` displayed the expected explicitly
+  non-factual placeholder response.
+- `./scripts/quality.sh` passed with 11 tests and one opt-in database integration
+  test skipped because its external URL was not configured.
+  `./scripts/terraform_quality.sh`, shell syntax checks, and
+  `git diff --check` also passed.
+
 ### 2026-11-18 — Slice 1 local walking skeleton
 
 - Added a Streamlit entry point, an explicit typed HTTP client, a FastAPI entry
@@ -196,6 +248,22 @@ None.
 
 ## Incidents
 
+- The first Slice 5 boundary apply was rejected before changing AWS because the
+  rendered managed policy exceeded IAM's 6,144-character quota. Removing
+  optional `Sid` labels reduced it to 5,835 non-whitespace characters without
+  changing permissions. AWS Access Analyzer returned zero findings and the
+  corrected one-resource plan applied successfully.
+- The first image-publish attempt inherited an unrelated `AWS_REGION` value and
+  targeted `eu-west-3`; ECR denied the upload before any image was pushed. Both
+  deployment scripts now use the project-specific
+  `PORTFOLIO_RAG_AWS_REGION`, defaulting to the selected `us-east-1` home
+  region.
+- The first published `v1` images were blocked before deployment because ECR
+  reported 12 critical findings in the Python 3.12.8 Debian base layer. The
+  exact base pin was upgraded to Python 3.12.16 and replacement `v2` scans
+  completed with no critical findings. The undeployed `v1` images remain in
+  immutable ECR history and will age out under the 20-image lifecycle policy.
+
 - The first production apply partially completed before RDS returned
   `KMSKeyNotAccessibleFault`. Terraform released its state lock and retained all
   successfully created resources in remote state. Root cause was a missing
@@ -209,6 +277,10 @@ None.
   history remain deferred until a use case requires them.
 
 ## Follow-up work
+
+- Review and prioritize the 15 high, 25 medium, and 6 low findings remaining in
+  each deployed image scan. They did not cross the documented critical-finding
+  deployment gate but remain explicit dependency/base-image maintenance work.
 
 - When image build time becomes material in CI or deployment, separate the
   locked third-party dependency layer from the first-party package install and

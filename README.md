@@ -112,12 +112,14 @@ Pull requests run the same checks in GitHub Actions. Repository automation,
 dependency maintenance, and the planned AWS OIDC trust boundary are documented
 in [`docs/github-operations.md`](docs/github-operations.md).
 
-## AWS foundation
+## AWS deployment
 
-The Terraform-managed Phase 0 foundation is under [`terraform/`](terraform/).
-Its runbook documents state bootstrap, required hostname inputs, saved-plan
-review, cost and recovery assumptions, and the explicit apply/destroy approval
-gates. Run its local formatting and validation checks with:
+The Terraform-managed Phase 0 AWS deployment is under
+[`terraform/`](terraform/). Its runbook documents state bootstrap, immutable
+image publishing, the controlled migration task, staged initial deployment,
+smoke testing, rollback, cost and recovery assumptions, and every explicit
+apply/destroy approval gate. Run its local formatting and validation checks
+with:
 
 ```sh
 ./scripts/terraform_quality.sh

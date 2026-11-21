@@ -34,7 +34,7 @@ def create_app(
     database = None
     if readiness_probe is None:
         database = Database(
-            api_settings.database_url.get_secret_value(),
+            api_settings.resolved_database_url(),
             connection_timeout_seconds=(
                 api_settings.database_connection_timeout_seconds
             ),
