@@ -19,6 +19,12 @@ and GitHub Actions ecosystems weekly, groups routine updates by ecosystem, and
 limits each ecosystem to three open version-update pull requests. Dependency
 updates remain visible for manual review; automatic merging is not enabled.
 
+The `Container build` workflow has the same triggers and independently builds
+both runtime images from their production Dockerfiles. The default-branch
+ruleset should require its `Build runtime images` job alongside `Python quality
+checks` so a pull request cannot merge when either locked application checks or
+either production image fails to build.
+
 Repository-level Actions permissions default to read-only, and workflows may
 not use `GITHUB_TOKEN` to approve pull requests. A future workflow must declare
 any narrower write permission at the job that needs it.
@@ -48,17 +54,50 @@ pull request have demonstrated verified commits throughout the merge path.
 Enabling the rule earlier could block otherwise valid work containing an
 unsigned commit, even when the pull request would be squash-merged.
 
-## Later AWS delivery through OIDC
+## AWS delivery through OIDC
 
-Phase 0 Slice 6 will add the AWS delivery path. GitHub Actions must exchange its
-short-lived OIDC token for scoped AWS roles; do not create or store long-lived
-AWS access keys in GitHub secrets.
+The manually dispatched `Deploy production` workflow accepts only a commit that
+is reachable from `master`. It serializes production runs without canceling an
+active deployment, builds and publishes API and UI images under the immutable
+`sha-<full-commit>` tag, creates a saved Terraform plan, and pauses at the
+protected `production` environment before applying that exact artifact. All
+third-party actions are pinned to full commit SHAs. No AWS access key is stored
+in GitHub.
 
-The AWS trust policy must restrict the GitHub OIDC audience to `sts.amazonaws.com`
-and restrict the subject to this repository and the exact approved branch or
-protected GitHub environment. Separate roles should grant only the permissions
-needed by CI, publishing, and deployment. Deployment workflows must request
-`id-token: write` only at the job that assumes a role, pin actions to immutable
-revisions, use protected production-environment approval, and deploy immutable
-image references. Terraform will manage the OIDC provider, roles, and trust
-policy when that slice is implemented.
+The bootstrap Terraform root manages GitHub's OIDC provider and three roles:
+
+- `portfolio-rag-github-publish` can publish only the two application ECR
+  repositories and trusts only workflows whose ref is `master`;
+- `portfolio-rag-github-plan` has read-only AWS and production-state access,
+  cannot lock or write state, and has the same `master` trust restriction;
+- `portfolio-rag-github-deploy` is capped by the Terraform operator boundary;
+  it can pass only the two application task roles, run only the migration task
+  family, and update only the one production service. It trusts only this
+  repository's `production` GitHub Environment.
+
+Every trust policy requires the `sts.amazonaws.com` audience. Jobs request
+`id-token: write` only when they assume one of these roles. The plan gate
+accepts exactly two ECS task-definition replacements and one ECS service
+update; any network, IAM, database, DNS, or other infrastructure change fails
+closed and must follow the separately reviewed manual Terraform path.
+
+Before the first dispatch, apply the reviewed bootstrap plan with the
+administrative bootstrap identity, then create a `production` GitHub
+Environment with a required reviewer and no branch other than `master`.
+Update the default-branch ruleset to require `Build runtime images`. These live
+changes must be performed and recorded separately because merging workflow
+files does not mutate AWS or repository settings.
+
+The deployment runs the new API image's backward-compatible Alembic migrations
+before applying the plan. ECS circuit-breaker rollback handles an unhealthy
+replacement; the workflow additionally restores the service's previous task
+definition when Terraform apply or digest verification fails. It verifies the
+running API and UI digests against ECR after the service stabilizes. A failed
+migration occurs before the service update and therefore leaves the running
+revision unchanged. Database migrations are not automatically reversible.
+
+To roll back an application revision, manually dispatch the workflow from
+`master` with the last known healthy commit SHA. The existing immutable images
+are reused, a new saved plan is reviewed at the environment gate, and the same
+migration, apply, health, and digest checks run. Never select a revision whose
+schema is incompatible with the database's current migration level.

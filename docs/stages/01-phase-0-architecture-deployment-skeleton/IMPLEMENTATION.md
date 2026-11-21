@@ -6,6 +6,39 @@ durable design documents rather than repeating them here.
 
 ## Results
 
+### 2026-11-21 — Slice 6 CI/CD delivery path prepared
+
+- Added pull-request and `master` container builds alongside the existing
+  deterministic Python quality workflow. Both production Dockerfiles now fail
+  closed in hosted feedback before their images can reach delivery.
+- Added a manually dispatched, serialized production workflow that accepts only
+  revisions reachable from `master`, publishes immutable full-commit image
+  tags, records their digests, and transfers a saved Terraform plan to a
+  separately approved `production` environment job.
+- Restricted the automated plan to the two ECS task-definition replacements
+  and one ECS service update. Any infrastructure change fails the workflow and
+  remains on the explicit manual plan/apply path.
+- Added Terraform-managed GitHub OIDC trust with separate read-only planning,
+  repository-scoped ECR publishing, and protected-environment deployment roles.
+  Trust policies bind both the `sts.amazonaws.com` audience and exact repository
+  subject; no long-lived AWS credential is required.
+- Added pre-deployment migration registration for the new immutable API image,
+  running-digest verification, and best-effort restoration of the prior healthy
+  ECS task definition when apply or verification fails. Migrations remain
+  backward-compatible and are not automatically reversed.
+- `./scripts/quality.sh` passed with 11 tests and the opt-in database test
+  skipped. Terraform formatting and validation, shell syntax, `actionlint`
+  1.7.7, both clean production-image builds, and `git diff --check` passed.
+  AWS Access Analyzer reported no error or security-warning findings for all
+  three rendered role policies. The refreshed bootstrap plan contains seven
+  creates, no changes, and no destroys; a read-only production test plan
+  contained exactly the two task-definition replacements and service update
+  accepted by the workflow gate.
+- The bootstrap apply, protected GitHub Environment, required container check,
+  live OIDC permission tests, image publication, approved deployment, and
+  forced-failure verification remain pending explicit live approval and cannot
+  be counted as completion evidence yet.
+
 ### 2026-11-21 — Slice 5 initial AWS deployment
 
 - Added the Terraform-managed public Application Load Balancer, TLS listener,

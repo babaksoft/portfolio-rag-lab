@@ -1,0 +1,278 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Full commit SHA or master revision to deploy
+        required: false
+        default: master
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  AWS_ACCOUNT_ID: "509399640122"
+  AWS_REGION: us-east-1
+  TERRAFORM_VERSION: "1.17.2"
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  resolve:
+    name: Resolve approved revision
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      image_tag: ${{ steps.revision.outputs.image_tag }}
+      sha: ${{ steps.revision.outputs.sha }}
+
+    steps:
+      - name: Check out master history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve revision on master
+        id: revision
+        env:
+          REQUESTED_REVISION: ${{ inputs.revision || github.sha }}
+        run: |
+          sha=$(git rev-parse "$REQUESTED_REVISION^{commit}")
+          git merge-base --is-ancestor "$sha" origin/master
+          echo "sha=$sha" >>"$GITHUB_OUTPUT"
+          echo "image_tag=sha-$sha" >>"$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish immutable images
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      api_digest: ${{ steps.images.outputs.api_digest }}
+      ui_digest: ${{ steps.images.outputs.ui_digest }}
+
+    steps:
+      - name: Check out resolved revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+
+      - name: Assume image-publish role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/portfolio-rag-github-publish
+          role-session-name: publish-${{ github.run_id }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+
+      - name: Check for a prior identical-revision publication
+        id: existing
+        env:
+          IMAGE_TAG: ${{ needs.resolve.outputs.image_tag }}
+        run: |
+          api_digest=$(aws ecr describe-images --repository-name portfolio-rag-api --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)
+          ui_digest=$(aws ecr describe-images --repository-name portfolio-rag-ui --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)
+          if [[ -n $api_digest && -n $ui_digest ]]; then
+            echo "published=true" >>"$GITHUB_OUTPUT"
+          elif [[ -n $api_digest || -n $ui_digest ]]; then
+            echo "Only one image exists for $IMAGE_TAG; refusing a partial publication." >&2
+            exit 1
+          else
+            echo "published=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and publish images
+        if: steps.existing.outputs.published == 'false'
+        env:
+          PORTFOLIO_RAG_AWS_REGION: ${{ env.AWS_REGION }}
+        run: ./scripts/aws_publish_images.sh "${{ needs.resolve.outputs.image_tag }}"
+
+      - name: Record image provenance
+        id: images
+        env:
+          IMAGE_TAG: ${{ needs.resolve.outputs.image_tag }}
+          REVISION: ${{ needs.resolve.outputs.sha }}
+        run: |
+          api_digest=$(aws ecr describe-images --repository-name portfolio-rag-api --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text)
+          ui_digest=$(aws ecr describe-images --repository-name portfolio-rag-ui --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text)
+          echo "api_digest=$api_digest" >>"$GITHUB_OUTPUT"
+          echo "ui_digest=$ui_digest" >>"$GITHUB_OUTPUT"
+          {
+            echo "### Published revision"
+            echo
+            echo "- Commit: \`$REVISION\`"
+            echo "- Tag: \`$IMAGE_TAG\`"
+            echo "- API digest: \`$api_digest\`"
+            echo "- UI digest: \`$ui_digest\`"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  plan:
+    name: Plan image deployment
+    needs:
+      - resolve
+      - publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out resolved revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Assume read-only plan role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/portfolio-rag-github-plan
+          role-session-name: plan-${{ github.run_id }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+
+      - name: Initialize production state
+        run: |
+          terraform -chdir=terraform/production init -input=false \
+            -backend-config="bucket=portfolio-rag-lab-tfstate-509399640122-us-east-1" \
+            -backend-config="key=portfolio-rag-lab/production/foundation.tfstate" \
+            -backend-config="region=$AWS_REGION" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: Create saved deployment plan
+        env:
+          TF_VAR_api_image_tag: ${{ needs.resolve.outputs.image_tag }}
+          TF_VAR_ui_image_tag: ${{ needs.resolve.outputs.image_tag }}
+        run: |
+          terraform -chdir=terraform/production plan -input=false -lock=false -out=deployment.tfplan
+          terraform -chdir=terraform/production show -json deployment.tfplan >terraform/production/deployment-plan.json
+          terraform -chdir=terraform/production show -no-color deployment.tfplan >terraform/production/deployment-plan.txt
+
+      - name: Reject infrastructure changes
+        run: |
+          jq -e '
+            [
+              .resource_changes[]
+              | select(.change.actions != ["no-op"] and .change.actions != ["read"])
+              | {address, actions: .change.actions}
+            ] as $changes
+            | ($changes | length) == 3
+              and all(
+                $changes[];
+                if .address == "aws_ecs_task_definition.application" or .address == "aws_ecs_task_definition.migration"
+                then .actions == ["delete", "create"] or .actions == ["create", "delete"]
+                elif .address == "aws_ecs_service.application"
+                then .actions == ["update"]
+                else false
+                end
+              )
+          ' terraform/production/deployment-plan.json
+
+      - name: Publish plan summary
+        run: |
+          {
+            echo "### Production deployment plan"
+            echo
+            echo '```text'
+            sed -n '/Terraform will perform the following actions:/,$p' terraform/production/deployment-plan.txt | tail -n 80
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Upload approved-plan candidate
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: production-plan-${{ needs.resolve.outputs.sha }}
+          path: |
+            terraform/production/deployment.tfplan
+            terraform/production/deployment-plan.txt
+          if-no-files-found: error
+          retention-days: 3
+
+  deploy:
+    name: Apply approved deployment
+    needs:
+      - resolve
+      - publish
+      - plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out resolved revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+
+      - name: Download saved deployment plan
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: production-plan-${{ needs.resolve.outputs.sha }}
+          path: terraform/production
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Assume protected deployment role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/portfolio-rag-github-deploy
+          role-session-name: deploy-${{ github.run_id }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+
+      - name: Initialize production state
+        run: |
+          terraform -chdir=terraform/production init -input=false \
+            -backend-config="bucket=portfolio-rag-lab-tfstate-509399640122-us-east-1" \
+            -backend-config="key=portfolio-rag-lab/production/foundation.tfstate" \
+            -backend-config="region=$AWS_REGION" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+
+      - name: Run backward-compatible migrations
+        env:
+          PORTFOLIO_RAG_AWS_REGION: ${{ env.AWS_REGION }}
+        run: ./scripts/aws_run_migration.sh "${{ needs.resolve.outputs.image_tag }}"
+
+      - name: Apply and verify, or restore last healthy task definition
+        env:
+          PORTFOLIO_RAG_AWS_REGION: ${{ env.AWS_REGION }}
+        run: ./scripts/aws_apply_deployment.sh deployment.tfplan "${{ needs.resolve.outputs.image_tag }}"
+
+      - name: Record deployed provenance
+        run: |
+          {
+            echo "### Deployed revision"
+            echo
+            echo "- Commit: \`${{ needs.resolve.outputs.sha }}\`"
+            echo "- Tag: \`${{ needs.resolve.outputs.image_tag }}\`"
+            echo "- API digest: \`${{ needs.publish.outputs.api_digest }}\`"
+            echo "- UI digest: \`${{ needs.publish.outputs.ui_digest }}\`"
+          } >>"$GITHUB_STEP_SUMMARY"

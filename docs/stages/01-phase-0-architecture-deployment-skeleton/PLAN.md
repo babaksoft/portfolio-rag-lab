@@ -271,7 +271,7 @@ tested rollback path.
 
 ## Slice 6 — CI/CD delivery path
 
-**Status:** Not started
+**Status:** Implemented; live activation and verification pending
 
 ### Outcome
 
