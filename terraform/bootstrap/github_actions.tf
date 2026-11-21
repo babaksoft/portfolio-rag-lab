@@ -46,7 +46,7 @@ data "aws_iam_policy_document" "github_master_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:ref:refs/heads/master"]
+      values   = ["${var.github_oidc_subject_prefix}:ref:refs/heads/master"]
     }
   }
 }
@@ -96,7 +96,7 @@ data "aws_iam_policy_document" "github_deploy_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:environment:production"]
+      values   = ["${var.github_oidc_subject_prefix}:environment:production"]
     }
   }
 }

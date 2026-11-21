@@ -75,3 +75,14 @@ variable "github_repository" {
     error_message = "github_repository must use the owner/repository format."
   }
 }
+
+variable "github_oidc_subject_prefix" {
+  description = "Immutable GitHub Actions OIDC subject prefix for the allowed repository, including owner and repository IDs."
+  type        = string
+  default     = "repo:babaksoft@15974699/portfolio-rag-lab@1461803566"
+
+  validation {
+    condition     = can(regex("^repo:[A-Za-z0-9_.-]+@[0-9]+/[A-Za-z0-9_.-]+@[0-9]+$", var.github_oidc_subject_prefix))
+    error_message = "github_oidc_subject_prefix must use GitHub's immutable repo:owner@owner_id/repository@repository_id format."
+  }
+}
