@@ -43,14 +43,6 @@
     },
     {
       "Effect": "Allow",
-      "Action": "ecs:DeregisterTaskDefinition",
-      "Resource": [
-        "arn:${aws_partition}:ecs:${aws_region}:${account_id}:task-definition/${name_prefix}:*",
-        "arn:${aws_partition}:ecs:${aws_region}:${account_id}:task-definition/${name_prefix}-migration:*"
-      ]
-    },
-    {
-      "Effect": "Allow",
       "Action": "ecs:RunTask",
       "Resource": "arn:${aws_partition}:ecs:${aws_region}:${account_id}:task-definition/${name_prefix}-migration:*",
       "Condition": {

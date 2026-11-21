@@ -286,6 +286,10 @@ service task definition, apply the saved plan, wait for stability, and compare
 both running image digests with ECR. A failed apply or digest check restores the
 prior task definition. The ECS deployment circuit breaker remains the first
 line of rollback for a replacement that cannot become healthy.
+Terraform retains superseded application and migration task-definition
+revisions instead of deregistering them during replacement. This keeps prior
+revisions available for rollback and avoids granting the deployment role
+account-wide task-definition deregistration.
 Because this emergency service restoration intentionally creates Terraform
 drift, inspect the failed run and review the next saved plan before another
 dispatch; do not update state by hand.
