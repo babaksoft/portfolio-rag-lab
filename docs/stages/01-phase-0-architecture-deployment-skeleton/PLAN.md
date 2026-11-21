@@ -175,7 +175,8 @@ run the integration suite, and demonstrate correct liveness/readiness behavior.
 
 ## Slice 4 — Terraform-managed AWS foundation
 
-**Status:** Not started
+**Status:** Complete (2026-11-21; foundation applied and post-apply health and
+convergence checks passed)
 
 ### Outcome
 

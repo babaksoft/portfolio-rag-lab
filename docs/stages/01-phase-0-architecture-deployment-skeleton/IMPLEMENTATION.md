@@ -81,13 +81,127 @@ durable design documents rather than repeating them here.
   returned 503 while liveness returned 200; readiness recovered to 200 after
   restart.
 
+### 2026-11-20 — Slice 4 Terraform-managed AWS foundation
+
+- Added a protected local-state bootstrap for an encrypted, versioned,
+  public-access-blocked S3 backend using Terraform's native S3 lockfile. The
+  production configuration has explicit backend configuration rather than
+  embedding an account-specific bucket name.
+- Added a two-Availability-Zone VPC with public edge, private application, and
+  isolated database subnets. One NAT gateway serves both application subnets as
+  a deliberate Phase 0 cost/availability tradeoff; database subnets have no
+  internet route.
+- Added directional security-group rules for the future edge, application, and
+  database boundaries. Public ingress is limited to HTTPS on the unused edge
+  group, Streamlit ingress is edge-only, PostgreSQL ingress is application-only,
+  and no network path exposes the API port.
+- Added immutable, scan-on-push ECR repositories with bounded retention, an ECS
+  cluster with Fargate capacity providers, 30-day API/UI log groups, and separate
+  least-privileged execution and application task roles. No task definition,
+  service, load balancer, Cognito resource, or delivery role was introduced.
+- Added a private, encrypted, single-AZ PostgreSQL 17 RDS instance with seven-day
+  backups, final snapshots, deletion protection, storage autoscaling, and an
+  RDS-managed master credential in Secrets Manager. The second application
+  secret is an empty container; Terraform manages no secret payload.
+- Added explicit registered-domain and application-hostname inputs, a public
+  Route 53 zone, DNS-validated ACM certificate, and registrar-delegation
+  procedure. No hostname was inferred from the AWS account.
+- Selected Terraform 1.10 or newer for S3 native lockfiles and constrained the
+  AWS provider to major version 6. Provider 6.73.0 was locked and both bootstrap
+  and production configurations passed `terraform validate` after clean
+  initialization.
+- Selected `us-east-1` as the explicit production and state home region rather
+  than inheriting an operator's CLI default. The runbook supports AWS CLI v2 IAM
+  Identity Center profiles through the standard credential chain without
+  coupling Terraform to a personal profile or blocking later OIDC credentials.
+- Selected `babaksoft.dev` as the public zone and
+  `portfolio-rag.babaksoft.dev` as this application's hostname. Added a
+  version-controlled Terraform operator policy plus protected operator and ECS
+  task boundaries. Project roles require the ECS boundary and may be passed
+  only to ECS tasks; the operator cannot modify either boundary or create and
+  delete hosted zones. Account, region, state, hostname, and hosted-zone values
+  are rendered from Terraform inputs rather than duplicated as literals in the
+  policy documents.
+- On 2026-11-21, an explicitly approved bootstrap plan was applied to AWS
+  account `509399640122` in `us-east-1`: eight resources were added with no
+  changes or destruction. It created the encrypted, versioned, non-public state
+  bucket `portfolio-rag-lab-tfstate-509399640122-us-east-1` and the protected
+  `PortfolioRagTerraformOperatorBoundary` and `PortfolioRagEcsTaskBoundary`
+  policies under `/portfolio-rag/`. A post-apply refresh reported no drift.
+- Attached the reviewed inline policy and customer-managed boundary to the
+  two-hour `PortfolioRagTerraformOperator` IAM Identity Center permission set,
+  assigned it to the existing user in account `509399640122`, and successfully
+  provisioned it. Configured an independent `portfolio-rag` AWS CLI profile and
+  SSO session. The profile resolved to the generated restricted role, could
+  read the configured state bucket location, and was denied unrelated
+  `iam:ListUsers` access as expected.
+- Initialized the production S3 backend with native locking through the
+  restricted operator and produced a saved production plan. The plan contains
+  46 creates, no changes or destruction, and no unexpected action type. Review
+  confirmed private encrypted deletion-protected RDS, no automatic public IPs,
+  public ingress only on the future edge group's TCP 443 rule, bounded ECS
+  roles, and no configured secret payload.
+- Estimated fixed baseline charges at approximately USD 51.78 per 730-hour
+  month before usage-dependent charges: one NAT gateway, one public IPv4
+  address, single-AZ `db.t4g.micro`, 20 GiB gp3 RDS storage, two Secrets Manager
+  secrets, and one Route 53 hosted zone. Current AWS prices were checked during
+  review; traffic, logs, image storage, DNS queries, excess backups, and NAT
+  data processing remain variable.
+- Route 53 registration of `babaksoft.dev` completed successfully. The domain
+  is active with auto-renewal and contact privacy enabled, and registration
+  created public hosted zone `Z06495321W44G2MBDFW2H`. The zone was imported
+  into the production S3 state through the restricted operator and protected
+  with `prevent_destroy`; no DNS record or name-server mutation occurred.
+- Replaced fixed IAM policy JSON with Terraform-rendered templates. The exact
+  rendered operator and ECS boundary documents passed AWS Access Analyzer with
+  zero findings. An approved bootstrap plan updated only the operator boundary
+  in place (zero creates or destroys), narrowing DNS writes to the imported
+  hosted zone and allowing tags only on that zone. The matching Identity Center
+  inline policy was updated and reprovisioned successfully, and a subsequent
+  bootstrap refresh reported no drift.
+- Corrected route-table-association and ACM-validation instance keys so imports
+  and fresh plans do not depend on apply-time resource objects. The registrar's
+  hosted-zone comment is preserved explicitly; the production plan changes
+  only the zone's standard project tags while retaining its ID, domain, and
+  four authoritative name servers.
+- Produced and machine-reviewed the post-registration production saved plan:
+  45 creates, one in-place hosted-zone tag update, and zero destroys. Review
+  reconfirmed that RDS is private, encrypted, deletion-protected, uses an
+  RDS-managed password and final snapshots; no subnet assigns public IPs; the
+  only public ingress is TCP 443 on the future edge group; and both ECS roles
+  retain the bootstrap-managed permissions boundary.
+- Applied the explicitly approved production plan. The first apply created 43
+  of 45 planned resources, including the VPC, NAT gateway, ECR repositories,
+  ECS cluster, IAM roles, log groups, Route 53 validation record, and issued ACM
+  certificate. RDS creation initially failed because the operator lacked the
+  AWS-documented `kms:DescribeKey` permission required for an RDS-managed master
+  password using the default Secrets Manager key.
+- Added only `kms:DescribeKey`, restricted to keys in the production account and
+  region carrying `alias/aws/secretsmanager`. The rendered policy passed AWS
+  Access Analyzer with zero findings; an approved bootstrap plan updated the
+  boundary in place, and the Identity Center permission set reprovisioned
+  successfully. The restricted profile then described that AWS-managed key but
+  received no decrypt, data-key, grant, or key-management permission.
+- A refreshed convergence plan contained only the two unfinished resources:
+  the RDS instance and its dependent ECS execution-role policy (`2` creates,
+  no changes or destroys). Applying it completed the foundation. Post-apply
+  checks found RDS `available`, private, encrypted, deletion-protected, and
+  backed by an active RDS-managed secret; ACM `ISSUED`; ECS `ACTIVE` with no
+  running tasks; and the NAT gateway `available`. A full production refresh
+  reported no drift.
+
 ## Deviations
 
 None.
 
 ## Incidents
 
-None.
+- The first production apply partially completed before RDS returned
+  `KMSKeyNotAccessibleFault`. Terraform released its state lock and retained all
+  successfully created resources in remote state. Root cause was a missing
+  documented prerequisite permission, not an inaccessible or disabled key.
+  The least-privilege policy correction and two-resource convergence plan are
+  recorded above; no resource was deleted or replaced during recovery.
 
 ## Deliberate compromises
 

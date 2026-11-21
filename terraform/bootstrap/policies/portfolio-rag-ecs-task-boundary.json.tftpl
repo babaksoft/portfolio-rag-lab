@@ -1,0 +1,45 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AuthorizeEcrClient",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Sid": "PullProjectImages",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+      ],
+      "Resource": [
+        "arn:${aws_partition}:ecr:${aws_region}:${account_id}:repository/portfolio-rag-api",
+        "arn:${aws_partition}:ecr:${aws_region}:${account_id}:repository/portfolio-rag-ui"
+      ]
+    },
+    {
+      "Sid": "WriteProjectLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": [
+        "arn:${aws_partition}:logs:${aws_region}:${account_id}:log-group:/ecs/${name_prefix}/api:*",
+        "arn:${aws_partition}:logs:${aws_region}:${account_id}:log-group:/ecs/${name_prefix}/ui:*"
+      ]
+    },
+    {
+      "Sid": "ReadProjectRuntimeSecrets",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": [
+        "arn:${aws_partition}:secretsmanager:${aws_region}:${account_id}:secret:${name_prefix}/application-*",
+        "arn:${aws_partition}:secretsmanager:${aws_region}:${account_id}:secret:rds!db-*"
+      ]
+    }
+  ]
+}

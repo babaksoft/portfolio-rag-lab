@@ -1,0 +1,10 @@
+aws_region           = "us-east-1"
+environment          = "production"
+hosted_zone_name     = "babaksoft.dev"
+application_hostname = "portfolio-rag.babaksoft.dev"
+
+# Review these cost and recovery settings before planning.
+database_instance_class      = "db.t4g.micro"
+database_deletion_protection = true
+vpc_cidr                     = "10.20.0.0/16"
+ecs_task_permissions_boundary_arn = "arn:aws:iam::509399640122:policy/portfolio-rag/PortfolioRagEcsTaskBoundary"
