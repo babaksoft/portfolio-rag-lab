@@ -242,8 +242,10 @@ the existing application Secrets Manager value as this JSON field:
 
 Never put that value in a Terraform variable, saved plan, shell history, or
 repository file. The `terraform_data.google_identity_provider` provisioner
-reads it directly from Secrets Manager and streams it to Cognito; neither the
-secret nor a hash of it enters Terraform state. For a fresh account, apply only
+reads it directly from Secrets Manager, writes the provider request to a
+mode-0600 memory-backed temporary file, removes that file immediately after
+Cognito accepts it, and never places the secret or a hash of it in Terraform
+state. For a fresh account, apply only
 the application secret resource first, populate it through an approved
 interactive AWS CLI operation, and then review the complete saved plan.
 

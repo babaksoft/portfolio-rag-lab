@@ -29,11 +29,14 @@ if aws cognito-idp describe-identity-provider \
   operation="update-identity-provider"
 fi
 
+provider_input="$(mktemp /dev/shm/portfolio-rag-google-provider.XXXXXX)"
+trap 'rm -f "${provider_input}"' EXIT
+
 GOOGLE_CLIENT_SECRET="${google_client_secret}" \
-GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
-USER_POOL_ID="${USER_POOL_ID}" \
-OPERATION="${operation}" \
-python3.12 -c '
+  GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
+  USER_POOL_ID="${USER_POOL_ID}" \
+  OPERATION="${operation}" \
+  python3.12 -c '
 import json
 import os
 
@@ -48,9 +51,13 @@ print(json.dumps({
     },
     "AttributeMapping": {"email": "email", "username": "sub"},
 }))
-' | aws cognito-idp "${operation}" \
-  --region "${AWS_REGION}" \
-  --cli-input-json file:///dev/stdin >/dev/null
-
+' >"${provider_input}"
 unset google_client_secret
+
+aws cognito-idp "${operation}" \
+  --region "${AWS_REGION}" \
+  --cli-input-json "file://${provider_input}" >/dev/null
+
+rm -f "${provider_input}"
+trap - EXIT
 echo "Google identity provider reconciled without exposing its client secret."
