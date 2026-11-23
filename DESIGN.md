@@ -207,9 +207,11 @@ but they do not make a single task highly available. See
 - The trusted edge or API verifies authentication. FastAPI owns authorization
   for backend operations; Streamlit may display identity state but must not be
   the authorization boundary.
-- The API client propagates the required credential or verified identity
-  context without persisting or logging it. The precise token and edge-flow
-  mechanism is selected in the Phase 0 authentication slice.
+- The Application Load Balancer establishes the browser session through
+  Cognito. The API client propagates the signed ALB assertion and signed Cognito
+  access token without persisting or logging either credential. FastAPI verifies
+  both credentials, their matching subject, and `reviewers` group membership as
+  specified by [ADR-0004](docs/adr/0004-verify-alb-and-cognito-credentials-in-api.md).
 
 ## Deferred decisions
 
@@ -220,7 +222,6 @@ The following choices do not block the first implementation slice:
 | Settings and HTTP-client libraries | The Phase 0 slice first requiring each capability |
 | Database schema, vector dimensions, and index type | The database and baseline-retrieval slices |
 | Exact API payloads, error codes, and versioning mechanism | The use case introducing each endpoint |
-| Cognito token propagation and load-balancer authentication flow | The Phase 0 authentication slice |
 | Model and embedding providers | The deterministic baseline stage |
 | Agent orchestration framework | The bounded-agentic retrieval spike |
 | Public domain and DNS name | Before public deployment requires them |

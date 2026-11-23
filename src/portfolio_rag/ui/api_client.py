@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from portfolio_rag.ui.settings import UiSettings
 
 CORRELATION_HEADER = "X-Correlation-ID"
+IDENTITY_ASSERTION_HEADER = "X-Amzn-Oidc-Data"
+ACCESS_TOKEN_HEADER = "X-Amzn-Oidc-AccessToken"
 
 
 class _MessagePayload(BaseModel):
@@ -68,7 +70,12 @@ class PortfolioApiClient:
         self._transport = transport
 
     def answer_message(
-        self, message: str, correlation_id: str | None = None
+        self,
+        message: str,
+        correlation_id: str | None = None,
+        *,
+        identity_assertion: str | None = None,
+        access_token: str | None = None,
     ) -> MessageResult:
         """Ask the backend to answer one message.
 
@@ -77,6 +84,10 @@ class PortfolioApiClient:
                 User message to send to the backend.
             correlation_id:
                 Optional caller-provided trace identifier.
+            identity_assertion:
+                Signed ALB user-claims assertion received by Streamlit.
+            access_token:
+                Signed Cognito access token received through the ALB.
 
         Returns:
             Validated task-oriented response.
@@ -87,6 +98,11 @@ class PortfolioApiClient:
         """
         request_correlation_id = correlation_id or str(uuid4())
         payload = _MessagePayload(message=message)
+        headers = {CORRELATION_HEADER: request_correlation_id}
+        if identity_assertion is not None:
+            headers[IDENTITY_ASSERTION_HEADER] = identity_assertion
+        if access_token is not None:
+            headers[ACCESS_TOKEN_HEADER] = access_token
 
         try:
             with httpx.Client(
@@ -97,7 +113,7 @@ class PortfolioApiClient:
                 response = client.post(
                     "/v1/messages",
                     json=payload.model_dump(mode="json"),
-                    headers={CORRELATION_HEADER: request_correlation_id},
+                    headers=headers,
                 )
                 response.raise_for_status()
         except httpx.RequestError as error:

@@ -1,13 +1,13 @@
 # AWS foundation
 
-This directory owns the Terraform-managed Phase 0 AWS foundation, application
-deployment, and GitHub Actions OIDC roles. It does not create Cognito resources.
+This directory owns the Terraform-managed Phase 0 AWS foundation, Cognito
+identity boundary, application deployment, and GitHub Actions OIDC roles.
 
 ## Prerequisites and inputs
 
-Install Terraform 1.10 or newer (but earlier than 2.0), AWS CLI v2, Docker, and
-`jq`. Use an AWS identity authorized to manage only the resources in the
-reviewed plan.
+Install Python 3.12, Terraform 1.10 or newer (but earlier than 2.0), AWS CLI v2,
+Docker, and `jq`. Use an AWS identity authorized to manage only the resources
+in the reviewed plan.
 The selected production home region is `us-east-1`; both Terraform roots set it
 explicitly instead of inheriting a developer's AWS CLI default. Changing regions
 after resources exist is a migration and requires a separately reviewed plan.
@@ -186,10 +186,10 @@ Before approval, verify the account and region and review:
 
 - only the application load balancer is publicly reachable, on TCP 443; no
   task, database, or secret has a public network path;
-- the edge group forwards only to Streamlit on TCP 8501 and does not expose the
-  FastAPI port;
-- application ingress is edge-group to TCP 8501 and database ingress is
-  application-group to TCP 5432;
+- the edge group forwards normal traffic only to Streamlit on TCP 8501; its
+  only FastAPI path is `/auth/logout` on TCP 8000;
+- application ingress is edge-group to TCP 8501 and TCP 8000, while database
+  ingress is application-group to TCP 5432;
 - IAM has no broad action except the resource-independent ECR authorization
   token call, and secret access names only the two runtime secrets;
 - RDS is encrypted, single-AZ, backed up for seven days, deletion-protected,
@@ -226,9 +226,53 @@ terraform -chdir=terraform/production apply foundation.tfplan
 
 Afterward, confirm ACM reports `ISSUED`, RDS reports `available` and is not
 public, and the route tables and effective security-group rules match the plan.
-The application secret remains empty until a later slice defines a concrete
-secret contract. Database credentials come directly from the RDS-managed
-secret and must not be copied into it.
+Database credentials come directly from the RDS-managed secret and must not be
+copied into the application secret.
+
+### Configure Google federation
+
+Create a Google OAuth web application for the Terraform output
+`cognito_google_callback_url`. Put its public client ID in the ignored
+`production.tfvars` as `google_oauth_client_id`. Store the client secret only in
+the existing application Secrets Manager value as this JSON field:
+
+```json
+{"google_oauth_client_secret":"replace-interactively"}
+```
+
+Never put that value in a Terraform variable, saved plan, shell history, or
+repository file. The `terraform_data.google_identity_provider` provisioner
+reads it directly from Secrets Manager and streams it to Cognito; neither the
+secret nor a hash of it enters Terraform state. For a fresh account, apply only
+the application secret resource first, populate it through an approved
+interactive AWS CLI operation, and then review the complete saved plan.
+
+The reviewed plan must create the user pool, managed-login domain, `reviewers`
+group, Google provider reconciliation step, app client, ALB authentication
+action, logout target, identity table migration, and task-definition trust
+anchors. Apply the bootstrap operator-boundary update and reprovision the IAM
+Identity Center permission set before attempting this production plan.
+
+After apply, add each approved Cognito user to the `reviewers` group. Merely
+authenticating with Google is insufficient for API access. Group changes take
+effect when Cognito issues a new access token; sign out and sign back in during
+verification.
+
+To rotate the Google secret, create a new Google credential, replace only the
+Secrets Manager JSON value through an approved interactive operation, and run a
+saved plan with:
+
+```sh
+terraform -chdir=terraform/production plan \
+  -var-file=terraform.tfvars \
+  -replace=terraform_data.google_identity_provider \
+  -out=google-secret-rotation.tfplan
+```
+
+Apply that exact reviewed plan, complete a new sign-in, then revoke the prior
+Google credential. A failed reconciliation leaves the current Cognito provider
+configuration unchanged and must not be worked around by putting the secret in
+Terraform.
 
 ## Publish and deploy the application
 
@@ -309,13 +353,19 @@ aws logs tail /ecs/portfolio-rag-production/api --region us-east-1 --since 10m
 aws logs tail /ecs/portfolio-rag-production/ui --region us-east-1 --since 10m
 ```
 
-Open `https://portfolio-rag.babaksoft.dev`, submit a message, and confirm the
-explicit placeholder response appears. Confirm the service reports one running
+Open `https://portfolio-rag.babaksoft.dev`, complete Google sign-in with a user
+in `reviewers`, submit a message, and confirm the explicit placeholder response
+appears. Confirm a signed-in user outside `reviewers` receives the bounded
+authorization failure. Sign out, confirm the ALB
+session cookie is removed, and verify the next protected request returns to
+sign-in. Confirm the same Google subject retains one internal identity across a
+second session. Confirm the service reports one running
 and one desired task, the target group reports one healthy target, API logs show
 successful readiness checks, neither log stream contains a database password,
-and the task has no public IP. Inspect the effective security groups: public
-ingress must be only edge TCP 443, edge-to-task traffic only TCP 8501, and
-task-to-database traffic only TCP 5432.
+and the task has no public IP. Inspect browser storage, task configuration,
+Terraform state/output, and logs for credential leakage. Inspect the effective
+security groups: public ingress must be only edge TCP 443, edge-to-task traffic
+only TCP 8501 and 8000, and task-to-database traffic only TCP 5432.
 
 To test desired-count recovery, stop the current task with `aws ecs stop-task`,
 then wait for the service to return to one healthy running task. This is an

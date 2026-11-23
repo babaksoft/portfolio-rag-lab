@@ -81,6 +81,16 @@ output "application_url" {
   value       = "https://${var.application_hostname}"
 }
 
+output "cognito_google_callback_url" {
+  description = "Authorized redirect URI to configure on the Google OAuth web client."
+  value       = "https://${aws_cognito_user_pool_domain.application.domain}.auth.${var.aws_region}.amazoncognito.com/oauth2/idpresponse"
+}
+
+output "cognito_user_pool_id" {
+  description = "User pool whose reviewers group authorizes application access."
+  value       = aws_cognito_user_pool.application.id
+}
+
 output "application_task_definition_arn" {
   description = "Task definition used by the one-task application service."
   value       = aws_ecs_task_definition.application.arn

@@ -33,6 +33,28 @@ resource "aws_lb_target_group" "ui" {
   }
 }
 
+resource "aws_lb_target_group" "api_logout" {
+  name        = "${local.name_prefix}-logout"
+  port        = 8000
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = aws_vpc.main.id
+
+  deregistration_delay = 30
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 15
+    matcher             = "200"
+    path                = "/health/live"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    timeout             = 5
+    unhealthy_threshold = 3
+  }
+}
+
 resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.application.arn
   port              = 443
@@ -41,8 +63,39 @@ resource "aws_lb_listener" "https" {
   certificate_arn   = aws_acm_certificate_validation.application.certificate_arn
 
   default_action {
+    order = 1
+    type  = "authenticate-cognito"
+
+    authenticate_cognito {
+      user_pool_arn       = aws_cognito_user_pool.application.arn
+      user_pool_client_id = aws_cognito_user_pool_client.load_balancer.id
+      user_pool_domain    = aws_cognito_user_pool_domain.application.domain
+      scope               = "openid email"
+      session_cookie_name = "AWSELBAuthSessionCookie"
+      session_timeout     = 3600
+    }
+  }
+
+  default_action {
+    order            = 2
     type             = "forward"
     target_group_arn = aws_lb_target_group.ui.arn
+  }
+}
+
+resource "aws_lb_listener_rule" "logout" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 1
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api_logout.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/auth/logout"]
+    }
   }
 }
 
@@ -121,8 +174,45 @@ resource "aws_ecs_task_definition" "application" {
           name  = "PORTFOLIO_RAG_API_DATABASE_CONNECTION_TIMEOUT_SECONDS"
           value = "2"
         },
+        {
+          name  = "PORTFOLIO_RAG_API_AUTHENTICATION_MODE"
+          value = "alb_cognito"
+        },
+        {
+          name  = "PORTFOLIO_RAG_API_AWS_REGION"
+          value = var.aws_region
+        },
+        {
+          name  = "PORTFOLIO_RAG_API_ALB_ARN"
+          value = aws_lb.application.arn
+        },
+        {
+          name  = "PORTFOLIO_RAG_API_COGNITO_USER_POOL_ID"
+          value = aws_cognito_user_pool.application.id
+        },
+        {
+          name  = "PORTFOLIO_RAG_API_COGNITO_CLIENT_ID"
+          value = aws_cognito_user_pool_client.load_balancer.id
+        },
+        {
+          name  = "PORTFOLIO_RAG_API_COGNITO_DOMAIN"
+          value = "${aws_cognito_user_pool_domain.application.domain}.auth.${var.aws_region}.amazoncognito.com"
+        },
+        {
+          name  = "PORTFOLIO_RAG_API_APPLICATION_URL"
+          value = "https://${var.application_hostname}"
+        },
+        {
+          name  = "PORTFOLIO_RAG_API_AUTHORIZED_GROUP"
+          value = aws_cognito_user_group.reviewers.name
+        },
       ])
       secrets = local.database_secrets
+      portMappings = [{
+        containerPort = 8000
+        hostPort      = 8000
+        protocol      = "tcp"
+      }]
       healthCheck = {
         command = [
           "CMD-SHELL",
@@ -244,5 +334,11 @@ resource "aws_ecs_service" "application" {
     container_port   = 8501
   }
 
-  depends_on = [aws_lb_listener.https]
+  load_balancer {
+    target_group_arn = aws_lb_target_group.api_logout.arn
+    container_name   = "api"
+    container_port   = 8000
+  }
+
+  depends_on = [aws_lb_listener_rule.logout]
 }

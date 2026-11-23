@@ -101,3 +101,13 @@ variable "service_desired_count" {
     error_message = "service_desired_count must be zero or one during Phase 0."
   }
 }
+
+variable "google_oauth_client_id" {
+  description = "Public Google OAuth client ID federated through Cognito; its secret is read directly from Secrets Manager during apply."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]+\\.apps\\.googleusercontent\\.com$", var.google_oauth_client_id))
+    error_message = "google_oauth_client_id must be a Google OAuth web-client identifier."
+  }
+}

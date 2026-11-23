@@ -7,6 +7,8 @@ from portfolio_rag.ui import ApiClientError, PortfolioApiClient, UiSettings
 def test_api_client_sends_and_returns_typed_message() -> None:
     def handle_request(request: httpx.Request) -> httpx.Response:
         assert request.headers["X-Correlation-ID"] == "ui-correlation"
+        assert request.headers["X-Amzn-Oidc-Data"] == "edge-assertion"
+        assert request.headers["X-Amzn-Oidc-AccessToken"] == "access-token"
         assert request.content == b'{"message":"Hello"}'
         return httpx.Response(
             200,
@@ -21,7 +23,12 @@ def test_api_client_sends_and_returns_typed_message() -> None:
         UiSettings(), transport=httpx.MockTransport(handle_request)
     )
 
-    result = client.answer_message("Hello", correlation_id="ui-correlation")
+    result = client.answer_message(
+        "Hello",
+        correlation_id="ui-correlation",
+        identity_assertion="edge-assertion",
+        access_token="access-token",
+    )
 
     assert result.answer == "Placeholder response"
     assert result.is_placeholder is True

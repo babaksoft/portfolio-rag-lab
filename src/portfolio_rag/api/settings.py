@@ -1,6 +1,8 @@
 """Typed configuration for the API process."""
 
-from pydantic import Field, SecretStr
+from typing import Literal, Self
+
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
 
@@ -26,6 +28,22 @@ class ApiSettings(BaseSettings):
             PostgreSQL login password.
         database_connection_timeout_seconds:
             Maximum seconds allowed for database connection attempts.
+        authentication_mode:
+            Credential verification mode; disabled is only for local development.
+        aws_region:
+            AWS region containing the trusted ALB and Cognito user pool.
+        alb_arn:
+            Exact load balancer ARN accepted as an identity-assertion signer.
+        cognito_user_pool_id:
+            Cognito user pool whose signed access tokens are accepted.
+        cognito_client_id:
+            Cognito app client used by the ALB authentication action.
+        authorized_group:
+            Cognito group required for application access.
+        cognito_domain:
+            Cognito managed-login domain used for sign-out.
+        application_url:
+            Public application URL allowed as the Cognito logout destination.
     """
 
     model_config = SettingsConfigDict(
@@ -88,6 +106,69 @@ class ApiSettings(BaseSettings):
         le=10,
         description="Maximum seconds allowed for database connection attempts.",
     )
+    authentication_mode: Literal["disabled", "alb_cognito"] = Field(
+        default="disabled",
+        description=(
+            "Credential verification mode; disabled permits local development only, "
+            "while alb_cognito verifies production edge and access tokens."
+        ),
+    )
+    aws_region: str = Field(
+        default="us-east-1",
+        min_length=1,
+        max_length=32,
+        description="AWS region containing the trusted ALB and Cognito user pool.",
+    )
+    alb_arn: str | None = Field(
+        default=None,
+        max_length=2048,
+        description="Exact trusted ALB signer ARN; required for alb_cognito mode.",
+    )
+    cognito_user_pool_id: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Trusted Cognito user pool ID; required for alb_cognito mode.",
+    )
+    cognito_client_id: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Trusted Cognito app client ID; required for alb_cognito mode.",
+    )
+    authorized_group: str = Field(
+        default="reviewers",
+        min_length=1,
+        max_length=128,
+        description="Exact Cognito group required for protected API operations.",
+    )
+    cognito_domain: str | None = Field(
+        default=None,
+        max_length=253,
+        description="Cognito managed-login hostname; required for production sign-out.",
+    )
+    application_url: str | None = Field(
+        default=None,
+        max_length=2048,
+        description="Public HTTPS application URL used after Cognito sign-out.",
+    )
+
+    @model_validator(mode="after")
+    def validate_authentication_configuration(self) -> Self:
+        """Require every trust anchor when production authentication is enabled."""
+        if self.authentication_mode == "alb_cognito" and any(
+            value is None
+            for value in (
+                self.alb_arn,
+                self.cognito_user_pool_id,
+                self.cognito_client_id,
+                self.cognito_domain,
+                self.application_url,
+            )
+        ):
+            raise ValueError(
+                "alb_arn, cognito_user_pool_id, and cognito_client_id are required "
+                "for alb_cognito authentication"
+            )
+        return self
 
     def resolved_database_url(self) -> str:
         """Return the configured or safely assembled SQLAlchemy database URL."""
