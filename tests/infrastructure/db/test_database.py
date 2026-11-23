@@ -4,7 +4,8 @@ import os
 import pytest
 from sqlalchemy import text
 
-from portfolio_rag.infrastructure.db import Database
+from portfolio_rag.domain import AuthenticatedPrincipal
+from portfolio_rag.infrastructure.db import Database, DbIdentityResolver
 
 TEST_DATABASE_URL_VARIABLE = "PORTFOLIO_RAG_TEST_DATABASE_URL"
 
@@ -24,6 +25,22 @@ def test_migrated_database_is_ready_and_has_pgvector() -> None:
                     text("SELECT extname FROM pg_extension WHERE extname = 'vector'")
                 )
             assert extension == "vector"
+
+            resolver = DbIdentityResolver(database.sessions)
+            first = await resolver.execute(
+                AuthenticatedPrincipal(
+                    external_subject="integration-subject",
+                    email="first@example.com",
+                )
+            )
+            second = await resolver.execute(
+                AuthenticatedPrincipal(
+                    external_subject="integration-subject",
+                    email="updated@example.com",
+                )
+            )
+            assert second.id == first.id
+            assert second.email == "updated@example.com"
         finally:
             await database.dispose()
 

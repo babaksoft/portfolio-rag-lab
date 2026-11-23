@@ -92,6 +92,12 @@
         "ec2:ReplaceRouteTableAssociation",
         "ec2:RevokeSecurityGroupEgress",
         "ec2:RevokeSecurityGroupIngress",
+        "cognito-idp:*Group",
+        "cognito-idp:*IdentityProvider",
+        "cognito-idp:*UserPool*",
+        "cognito-idp:ListTagsForResource",
+        "cognito-idp:TagResource",
+        "cognito-idp:UntagResource",
         "ecr:CreateRepository",
         "ecr:DeleteLifecyclePolicy",
         "ecr:DeleteRepository",
@@ -108,14 +114,14 @@
         "ecs:StopTask",
         "ecs:UpdateService",
         "elasticloadbalancing:AddTags",
-        "elasticloadbalancing:CreateListener",
-        "elasticloadbalancing:CreateLoadBalancer",
-        "elasticloadbalancing:CreateTargetGroup",
+        "elasticloadbalancing:Create*",
         "elasticloadbalancing:DeleteListener",
         "elasticloadbalancing:DeleteLoadBalancer",
+        "elasticloadbalancing:DeleteRule",
         "elasticloadbalancing:DeleteTargetGroup",
         "elasticloadbalancing:ModifyListener",
         "elasticloadbalancing:ModifyLoadBalancerAttributes",
+        "elasticloadbalancing:ModifyRule",
         "elasticloadbalancing:ModifyTargetGroup",
         "elasticloadbalancing:ModifyTargetGroupAttributes",
         "elasticloadbalancing:RemoveTags",
@@ -151,6 +157,11 @@
           "aws:RequestedRegion": "${aws_region}"
         }
       }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:${aws_partition}:secretsmanager:${aws_region}:${account_id}:secret:${name_prefix}/application-*"
     },
     {
       "Effect": "Allow",

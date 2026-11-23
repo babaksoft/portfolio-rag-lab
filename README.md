@@ -117,9 +117,11 @@ in [`docs/github-operations.md`](docs/github-operations.md).
 The Terraform-managed Phase 0 AWS deployment is under
 [`terraform/`](terraform/). Its runbook documents state bootstrap, immutable
 image publishing, the controlled migration task, staged initial deployment,
+Google-federated Cognito setup, `reviewers` group authorization, sign-out,
 smoke testing, rollback, cost and recovery assumptions, and every explicit
-apply/destroy approval gate. Run its local formatting and validation checks
-with:
+apply/destroy approval gate. Production authenticates at the load balancer and
+authorizes again in FastAPI; local development explicitly leaves authentication
+disabled. Run its local formatting and validation checks with:
 
 ```sh
 ./scripts/terraform_quality.sh

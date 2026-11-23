@@ -6,92 +6,6 @@ durable design documents rather than repeating them here.
 
 ## Results
 
-### 2026-11-21 — Slice 6 CI/CD delivery path prepared
-
-- Added pull-request and `master` container builds alongside the existing
-  deterministic Python quality workflow. Both production Dockerfiles now fail
-  closed in hosted feedback before their images can reach delivery.
-- Added a manually dispatched, serialized production workflow that accepts only
-  revisions reachable from `master`, publishes immutable full-commit image
-  tags, records their digests, and transfers a saved Terraform plan to a
-  separately approved `production` environment job.
-- Restricted the automated plan to the two ECS task-definition replacements
-  and one ECS service update. Any infrastructure change fails the workflow and
-  remains on the explicit manual plan/apply path.
-- Added Terraform-managed GitHub OIDC trust roles with separate read-only
-  planning, repository-scoped ECR publishing, and protected-environment
-  deployment permissions. The roles reference the account-level OIDC provider.
-  Trust policies bind both the `sts.amazonaws.com` audience and exact repository
-  subject; no long-lived AWS credential is required.
-- Added pre-deployment migration registration for the new immutable API image,
-  running-digest verification, and best-effort restoration of the prior healthy
-  ECS task definition when apply or verification fails. Migrations remain
-  backward-compatible and are not automatically reversed.
-- `./scripts/quality.sh` passed with 11 tests and the opt-in database test
-  skipped. Terraform formatting and validation, shell syntax, `actionlint`
-  1.7.7, both clean production-image builds, and `git diff --check` passed.
-  AWS Access Analyzer reported no error or security-warning findings for all
-  three rendered role policies. The refreshed bootstrap plan contains seven
-  creates, no changes, and no destroys; a read-only production test plan
-  contained exactly the two task-definition replacements and service update
-  accepted by the workflow gate.
-- The bootstrap apply, protected GitHub Environment, required container check,
-  live OIDC permission tests, image publication, approved deployment, and
-  forced-failure verification remain pending explicit live approval and cannot
-  be counted as completion evidence yet.
-
-### 2026-11-21 — Slice 5 initial AWS deployment
-
-- Added the Terraform-managed public Application Load Balancer, TLS listener,
-  alias record, Streamlit target group, two-container application task,
-  one-count ECS service, and controlled one-off migration task. Only TCP 443 is
-  public; the load balancer reaches only Streamlit on TCP 8501, and the UI
-  reaches FastAPI over the shared task-local loopback interface.
-- Configured ECS deployment rollback, container health dependencies, private
-  task networking, no public task IP, and RDS-backed API readiness. The RDS
-  managed secret remains the only database credential source: ECS injects its
-  username and password JSON fields, while the API safely assembles the
-  SQLAlchemy URL without copying credentials into Terraform state.
-- Added commands for publishing immutable API and UI image tags and running a
-  migration task whose exit code is checked before service deployment. Added a
-  staged first-deployment procedure, smoke checklist, task-restoration test,
-  second-version deployment, and rollback procedure to the Terraform runbook.
-- Expanded the bootstrap-managed Terraform operator boundary only for the ECS
-  task/service, migration/recovery task, repository-scoped image publication,
-  and Elastic Load Balancing operations introduced by this slice. AWS Access
-  Analyzer reported zero findings for the rendered policy.
-- Applied the explicitly approved operator-boundary update in place and
-  reprovisioned the matching Identity Center permission set. The staged
-  zero-task production plan contained seven creates, no changes, and no
-  destroys; applying it created the task definitions, service, load balancer,
-  TLS listener, target group, and DNS alias without starting application
-  traffic.
-- Published and deployed immutable `slice5-20261121-2beab6c970fb-v2` images
-  after upgrading both exact runtime base-image pins to Python 3.12.16. ECR
-  reported no critical findings; the API digest is
-  `sha256:ac4522cd5fa78841a3807c1ac718403ca1f1770652f6397913e6ee9a7f89eba2`
-  and the UI digest is
-  `sha256:e76a42c2535ff20f21ace563e39114879ed2627e1aade9bb06a646a525249111`.
-- The private migration task exited zero and applied the pgvector migration.
-  The activation plan changed only desired count from zero to one. TLS health,
-  the healthy ALB target, one healthy two-container task, repeated
-  database-backed API readiness probes, exact image digests, private task ENI,
-  and effective directional security-group rules all matched the design.
-  A private one-off task exercised the real UI API client over task-local
-  loopback and both containers exited zero.
-- Stopping the sole service task caused the expected brief outage; ECS restored
-  a different healthy task and returned to one running and one desired. A
-  second immutable `v3` tag deployed successfully, after which the documented
-  rollback restored `v2` on task-definition revision 3. Final TLS, container,
-  service, and target health checks passed, and a production refresh reported
-  no drift. A manual browser submission at the live entry point
-  `https://portfolio-rag.babaksoft.dev` displayed the expected explicitly
-  non-factual placeholder response.
-- `./scripts/quality.sh` passed with 11 tests and one opt-in database integration
-  test skipped because its external URL was not configured.
-  `./scripts/terraform_quality.sh`, shell syntax checks, and
-  `git diff --check` also passed.
-
 ### 2026-11-18 — Slice 1 local walking skeleton
 
 - Added a Streamlit entry point, an explicit typed HTTP client, a FastAPI entry
@@ -276,6 +190,112 @@ durable design documents rather than repeating them here.
   running tasks; and the NAT gateway `available`. A full production refresh
   reported no drift.
 
+### 2026-11-21 — Slice 5 initial AWS deployment
+
+- Added the Terraform-managed public Application Load Balancer, TLS listener,
+  alias record, Streamlit target group, two-container application task,
+  one-count ECS service, and controlled one-off migration task. Only TCP 443 is
+  public; the load balancer reaches only Streamlit on TCP 8501, and the UI
+  reaches FastAPI over the shared task-local loopback interface.
+- Configured ECS deployment rollback, container health dependencies, private
+  task networking, no public task IP, and RDS-backed API readiness. The RDS
+  managed secret remains the only database credential source: ECS injects its
+  username and password JSON fields, while the API safely assembles the
+  SQLAlchemy URL without copying credentials into Terraform state.
+- Added commands for publishing immutable API and UI image tags and running a
+  migration task whose exit code is checked before service deployment. Added a
+  staged first-deployment procedure, smoke checklist, task-restoration test,
+  second-version deployment, and rollback procedure to the Terraform runbook.
+- Expanded the bootstrap-managed Terraform operator boundary only for the ECS
+  task/service, migration/recovery task, repository-scoped image publication,
+  and Elastic Load Balancing operations introduced by this slice. AWS Access
+  Analyzer reported zero findings for the rendered policy.
+- Applied the explicitly approved operator-boundary update in place and
+  reprovisioned the matching Identity Center permission set. The staged
+  zero-task production plan contained seven creates, no changes, and no
+  destroys; applying it created the task definitions, service, load balancer,
+  TLS listener, target group, and DNS alias without starting application
+  traffic.
+- Published and deployed immutable `slice5-20261121-2beab6c970fb-v2` images
+  after upgrading both exact runtime base-image pins to Python 3.12.16. ECR
+  reported no critical findings; the API digest is
+  `sha256:ac4522cd5fa78841a3807c1ac718403ca1f1770652f6397913e6ee9a7f89eba2`
+  and the UI digest is
+  `sha256:e76a42c2535ff20f21ace563e39114879ed2627e1aade9bb06a646a525249111`.
+- The private migration task exited zero and applied the pgvector migration.
+  The activation plan changed only desired count from zero to one. TLS health,
+  the healthy ALB target, one healthy two-container task, repeated
+  database-backed API readiness probes, exact image digests, private task ENI,
+  and effective directional security-group rules all matched the design.
+  A private one-off task exercised the real UI API client over task-local
+  loopback and both containers exited zero.
+- Stopping the sole service task caused the expected brief outage; ECS restored
+  a different healthy task and returned to one running and one desired. A
+  second immutable `v3` tag deployed successfully, after which the documented
+  rollback restored `v2` on task-definition revision 3. Final TLS, container,
+  service, and target health checks passed, and a production refresh reported
+  no drift. A manual browser submission at the live entry point
+  `https://portfolio-rag.babaksoft.dev` displayed the expected explicitly
+  non-factual placeholder response.
+- `./scripts/quality.sh` passed with 11 tests and one opt-in database integration
+  test skipped because its external URL was not configured.
+  `./scripts/terraform_quality.sh`, shell syntax checks, and
+  `git diff --check` also passed.
+
+### 2026-11-21 — Slice 6 CI/CD delivery path
+
+- Added pull-request and `master` container builds alongside the existing
+  deterministic Python quality workflow. Both production Dockerfiles fail
+  closed in hosted feedback before their images can reach delivery.
+- Added a manually dispatched, serialized production workflow that accepts only
+  revisions reachable from `master`, publishes immutable full-commit image
+  tags, records their digests, and transfers a saved Terraform plan to a
+  separately approved `production` environment job.
+- Restricted the automated plan to the two ECS task-definition replacements
+  and one ECS service update. Any infrastructure change fails the workflow and
+  remains on the explicit manual plan/apply path.
+- Added Terraform-managed GitHub OIDC trust roles with separate read-only
+  planning, repository-scoped ECR publishing, and protected-environment
+  deployment permissions. Trust policies bind the `sts.amazonaws.com` audience
+  and exact repository subject; no long-lived AWS credential is required.
+- Added pre-deployment migration registration, running-digest verification, and
+  best-effort restoration of the prior healthy ECS task definition when apply
+  or verification fails. Migrations remain backward-compatible and are not
+  automatically reversed.
+- The live provision, deploy, rollback, and teardown cycle was subsequently
+  verified and working. This closes the live activation and failure-path work
+  that remained pending when the implementation was first prepared.
+
+### 2026-11-22 — Slice 7 Cognito and internal identity foundation prepared
+
+- Selected the dual-verification flow in
+  [ADR-0004](../../adr/0004-verify-alb-and-cognito-credentials-in-api.md): the
+  ALB authenticates the browser, while FastAPI verifies both the ALB-signed
+  claims and Cognito-signed access token, requires matching subjects, and
+  authorizes only the `reviewers` group.
+- Added Terraform-managed Cognito user pool, managed-login domain, `reviewers`
+  group, app client, ALB authentication action, and a narrow unauthenticated
+  logout route. Google federation is reconciled during apply by reading its
+  secret directly from the existing application secret; the Google secret is
+  absent from Terraform configuration, plan values, and state.
+- Added a reversible identity-table migration, natural domain values, repository
+  protocol, PostgreSQL adapter, and the narrow `ResolveIdentityService`. An
+  atomic subject upsert preserves the application-owned UUID across sessions
+  and refreshes only the optional verified email.
+- Streamlit forwards the two credentials only over task-local HTTP. FastAPI
+  fetches signing keys from fixed regional AWS endpoints, validates signer,
+  issuer, client, use, expiry, subject, and group, and returns bounded 401/403
+  failures without credential diagnostics.
+- Added isolated cryptographic, API-boundary, client-propagation, settings, and
+  optional database-integration coverage. `./scripts/quality.sh` passed with 20
+  tests and the opt-in database test skipped; that test then passed twice
+  against an isolated PostgreSQL/pgvector container, before and after a clean
+  identity-migration downgrade/reapply cycle. Terraform formatting and
+  validation, shell syntax, and `git diff --check` passed. Live Google client
+  creation, secret population, approved Terraform apply, reviewer assignment,
+  browser sign-in, session continuation, sign-out, leakage inspection, and
+  stable-identity smoke checks remain pending explicit live approval.
+
 ## Deviations
 
 None.
@@ -309,6 +329,10 @@ None.
 
 - The UI shows only the current exchange; durable conversation identity and
   history remain deferred until a use case requires them.
+- The AWS provider's Cognito identity-provider resource stores Google provider
+  details in Terraform state. A secret-safe, idempotent apply-time reconciler
+  therefore manages that one provider binding while Terraform owns the user
+  pool, domain, group, app client, and its reconciliation lifecycle trigger.
 
 ## Follow-up work
 

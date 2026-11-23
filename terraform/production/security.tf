@@ -40,12 +40,30 @@ resource "aws_vpc_security_group_egress_rule" "edge_to_application" {
   referenced_security_group_id = aws_security_group.application.id
 }
 
+resource "aws_vpc_security_group_egress_rule" "edge_to_api_logout" {
+  security_group_id            = aws_security_group.edge.id
+  description                  = "Logout traffic to the API adapter"
+  ip_protocol                  = "tcp"
+  from_port                    = 8000
+  to_port                      = 8000
+  referenced_security_group_id = aws_security_group.application.id
+}
+
 resource "aws_vpc_security_group_ingress_rule" "application_from_edge" {
   security_group_id            = aws_security_group.application.id
   description                  = "Streamlit traffic from the future load balancer"
   ip_protocol                  = "tcp"
   from_port                    = 8501
   to_port                      = 8501
+  referenced_security_group_id = aws_security_group.edge.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "api_logout_from_edge" {
+  security_group_id            = aws_security_group.application.id
+  description                  = "Logout traffic from the load balancer"
+  ip_protocol                  = "tcp"
+  from_port                    = 8000
+  to_port                      = 8000
   referenced_security_group_id = aws_security_group.edge.id
 }
 

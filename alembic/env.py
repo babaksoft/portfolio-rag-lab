@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from portfolio_rag.api.settings import ApiSettings
+from portfolio_rag.infrastructure.db import Base
 
 config = context.config
 if config.config_file_name is not None:
@@ -17,7 +18,7 @@ config.set_main_option(
     "sqlalchemy.url",
     ApiSettings().resolved_database_url().replace("%", "%%"),
 )
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

@@ -5,9 +5,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from portfolio_rag.api.correlation import get_correlation_id
-from portfolio_rag.api.dependencies import get_answer_message_service
+from portfolio_rag.api.dependencies import (
+    get_answer_message_service,
+    get_current_identity,
+)
 from portfolio_rag.api.models import ErrorResponse, MessageRequest, MessageResponse
 from portfolio_rag.application.services import AnswerMessageService
+from portfolio_rag.domain import Identity
 
 router = APIRouter(prefix="/v1/messages", tags=["messages"])
 
@@ -15,11 +19,16 @@ router = APIRouter(prefix="/v1/messages", tags=["messages"])
 @router.post(
     "",
     response_model=MessageResponse,
-    responses={422: {"model": ErrorResponse}},
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        422: {"model": ErrorResponse},
+    },
 )
 async def answer_message(
     request: MessageRequest,
     service: Annotated[AnswerMessageService, Depends(get_answer_message_service)],
+    identity: Annotated[Identity, Depends(get_current_identity)],
 ) -> MessageResponse:
     """Validate and answer one message through the application service."""
     result = service.execute(request.message)

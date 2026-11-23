@@ -1,4 +1,5 @@
-from pydantic import SecretStr
+import pytest
+from pydantic import SecretStr, ValidationError
 
 from portfolio_rag.api.settings import ApiSettings
 
@@ -28,3 +29,8 @@ def test_database_components_are_safely_encoded() -> None:
         "postgresql+asyncpg://portfolio_admin:p%40ss%2Fword@"
         "database.internal:5433/portfolio_rag"
     )
+
+
+def test_production_authentication_requires_every_trust_anchor() -> None:
+    with pytest.raises(ValidationError, match="alb_arn"):
+        ApiSettings(authentication_mode="alb_cognito")

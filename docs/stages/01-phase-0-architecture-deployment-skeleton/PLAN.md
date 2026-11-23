@@ -271,7 +271,8 @@ tested rollback path.
 
 ## Slice 6 — CI/CD delivery path
 
-**Status:** Implemented; live activation and verification pending
+**Status:** Complete (2026-11-22; live provision, deploy, rollback, and teardown
+cycle verified)
 
 ### Outcome
 
@@ -318,7 +319,7 @@ unchanged.
 
 ## Slice 7 — Cognito and internal identity foundation
 
-**Status:** Not started
+**Status:** Implemented locally; live activation and verification pending
 
 ### Outcome
 
