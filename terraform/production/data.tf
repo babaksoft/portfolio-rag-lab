@@ -33,19 +33,31 @@ resource "aws_db_instance" "main" {
   maintenance_window         = "sun:04:00-sun:05:00"
   auto_minor_version_upgrade = true
   copy_tags_to_snapshot      = true
-  deletion_protection        = var.database_deletion_protection
+  deletion_protection        = false
   skip_final_snapshot        = false
-  final_snapshot_identifier  = "${local.name_prefix}-final"
+  final_snapshot_identifier = (
+    "${local.name_prefix}-final-${formatdate("YYYYMMDDhhmmss", plantimestamp())}"
+  )
 
   apply_immediately = false
 
   lifecycle {
-    prevent_destroy = true
+    # Allocate the teardown snapshot name when this database is created. Later
+    # plans must not rotate it merely because their plan timestamp changed.
+    ignore_changes = [final_snapshot_identifier]
   }
 }
 
 resource "aws_secretsmanager_secret" "application" {
-  name                    = "${local.name_prefix}/application"
+  name = (
+    "${local.name_prefix}/application-${formatdate("YYYYMMDDhhmmss", plantimestamp())}"
+  )
   description             = "Runtime application secrets populated outside Terraform."
   recovery_window_in_days = 7
+
+  lifecycle {
+    # A deleted secret keeps its name during the recovery window. Allocate a
+    # fresh name on reconstruction, then keep it stable for this environment.
+    ignore_changes = [name]
+  }
 }

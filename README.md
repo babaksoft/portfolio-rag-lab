@@ -121,7 +121,11 @@ Google-federated Cognito setup, `reviewers` group authorization, sign-out,
 smoke testing, rollback, cost and recovery assumptions, and every explicit
 apply/destroy approval gate. Production authenticates at the load balancer and
 authorizes again in FastAPI; local development explicitly leaves authentication
-disabled. Run its local formatting and validation checks with:
+disabled. The terminal-first
+[`production lifecycle runbook`](docs/production-lifecycle-runbook.md) records
+manual reconstruction, activation, smoke testing, rollback, suspension, and
+full teardown commands for use without an active coding-agent session. Run
+local Terraform formatting and validation checks with:
 
 ```sh
 ./scripts/terraform_quality.sh
