@@ -162,6 +162,8 @@ jobs:
         env:
           TF_VAR_api_image_tag: ${{ needs.resolve.outputs.image_tag }}
           TF_VAR_ui_image_tag: ${{ needs.resolve.outputs.image_tag }}
+          # Public Google web client ID for the production Cognito provider.
+          TF_VAR_google_oauth_client_id: 962756636955-3rceqhak12e95a311v90805o3d1siphm.apps.googleusercontent.com
         run: |
           terraform -chdir=terraform/production plan -input=false -lock=false -out=deployment.tfplan
           terraform -chdir=terraform/production show -json deployment.tfplan >terraform/production/deployment-plan.json

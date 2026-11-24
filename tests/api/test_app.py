@@ -84,7 +84,7 @@ def _authenticated_settings() -> ApiSettings:
         cognito_user_pool_id="us-east-1_example",
         cognito_client_id="client-id",
         cognito_domain="portfolio-rag.auth.us-east-1.amazoncognito.com",
-        application_url="https://portfolio.example.com",
+        application_url="https://portfolio.example.com/signed-out",
     )
 
 
@@ -221,6 +221,10 @@ def test_logout_expires_alb_cookie_shards_and_uses_cognito() -> None:
     assert response.status_code == 303
     assert response.headers["location"].startswith(
         "https://portfolio-rag.auth.us-east-1.amazoncognito.com/logout?"
+    )
+    assert (
+        "logout_uri=https%3A%2F%2Fportfolio.example.com%2Fsigned-out"
+        in (response.headers["location"])
     )
     cookies = response.headers.get_list("set-cookie")
     assert len(cookies) == 5

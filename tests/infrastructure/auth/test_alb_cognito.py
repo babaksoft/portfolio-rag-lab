@@ -15,13 +15,16 @@ from portfolio_rag.infrastructure.auth import AlbCognitoIdentityVerifier
 REGION = "us-east-1"
 POOL_ID = "us-east-1_example"
 CLIENT_ID = "client-id"
+COGNITO_KEY_ID = "example+pool/signing-key="
 ALB_ARN = (
     "arn:aws:elasticloadbalancing:us-east-1:123456789012:"
     "loadbalancer/app/portfolio/1234"
 )
 
 
-def _credentials(groups: list[str]) -> tuple[str, str, httpx.MockTransport]:
+def _credentials(
+    groups: list[str], *, email_verified: bool | str = True
+) -> tuple[str, str, httpx.MockTransport]:
     now = int(time.time())
     subject = "11111111-2222-3333-4444-555555555555"
     alb_private_key = ec.generate_private_key(ec.SECP256R1())
@@ -31,10 +34,14 @@ def _credentials(groups: list[str]) -> tuple[str, str, httpx.MockTransport]:
     )
     cognito_private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     cognito_jwk = json.loads(RSAAlgorithm.to_jwk(cognito_private_key.public_key()))
-    cognito_jwk["kid"] = "cognito-key"
+    cognito_jwk["kid"] = COGNITO_KEY_ID
 
     assertion = jwt.encode(
-        {"sub": subject, "email": "reviewer@example.com"},
+        {
+            "sub": subject,
+            "email": "reviewer@example.com",
+            "email_verified": email_verified,
+        },
         alb_private_key,
         algorithm="ES256",
         headers={
@@ -55,12 +62,13 @@ def _credentials(groups: list[str]) -> tuple[str, str, httpx.MockTransport]:
         },
         cognito_private_key,
         algorithm="RS256",
-        headers={"kid": "cognito-key"},
+        headers={"kid": COGNITO_KEY_ID},
     )
 
     def respond(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/alb-key":
             return httpx.Response(200, content=alb_public_key)
+        assert request.url.path == f"/{POOL_ID}/.well-known/jwks.json"
         return httpx.Response(200, json={"keys": [cognito_jwk]})
 
     return assertion, access_token, httpx.MockTransport(respond)
@@ -91,6 +99,29 @@ def test_rejects_verified_principal_outside_reviewers() -> None:
 
     with pytest.raises(AuthorizationError):
         asyncio.run(_verifier(transport).verify(assertion, access_token))
+
+
+def test_rejects_credentials_when_signing_keys_are_unavailable() -> None:
+    assertion, access_token, _transport = _credentials(["reviewers"])
+
+    def fail(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("Signing keys unavailable.", request=request)
+
+    with pytest.raises(AuthenticationError, match="Credentials could not be verified"):
+        asyncio.run(
+            _verifier(httpx.MockTransport(fail)).verify(assertion, access_token)
+        )
+
+
+@pytest.mark.parametrize("email_verified", [False, "false"])
+def test_ignores_unverified_email(email_verified: bool | str) -> None:
+    assertion, access_token, transport = _credentials(
+        ["reviewers"], email_verified=email_verified
+    )
+
+    principal = asyncio.run(_verifier(transport).verify(assertion, access_token))
+
+    assert principal.email is None
 
 
 def test_rejects_client_controlled_identity_assertion() -> None:

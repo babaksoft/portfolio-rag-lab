@@ -13,7 +13,7 @@ def run() -> None:
     identity_assertion = st.context.headers.get("X-Amzn-Oidc-Data")
     access_token = st.context.headers.get("X-Amzn-Oidc-AccessToken")
     if identity_assertion is not None:
-        st.markdown("[Sign out](/auth/logout)")
+        st.html('<a href="/auth/logout" target="_self">Sign out</a>')
 
     message = st.chat_input("Ask about the portfolio")
     if message is None:
