@@ -1,5 +1,6 @@
 """Verification for ALB identity assertions and Cognito access tokens."""
 
+import logging
 import re
 import time
 from typing import cast
@@ -11,7 +12,8 @@ from jwt import InvalidTokenError, PyJWK
 from portfolio_rag.application import AuthenticationError, AuthorizationError
 from portfolio_rag.domain import AuthenticatedPrincipal
 
-_KEY_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+_ALB_KEY_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,128}")
+logger = logging.getLogger(__name__)
 
 
 class AlbCognitoIdentityVerifier:
@@ -68,7 +70,10 @@ class AlbCognitoIdentityVerifier:
                 dict[str, object], jwt.get_unverified_header(identity_assertion)
             )
             self._validate_assertion_header(assertion_header)
-            assertion_key = await self._get_alb_key(self._key_id(assertion_header))
+            assertion_key_id = self._key_id(assertion_header)
+            if _ALB_KEY_ID_PATTERN.fullmatch(assertion_key_id) is None:
+                raise AuthenticationError("The edge signing-key identifier is invalid.")
+            assertion_key = await self._get_alb_key(assertion_key_id)
             assertion_claims = cast(
                 dict[str, object],
                 jwt.decode(
@@ -86,6 +91,7 @@ class AlbCognitoIdentityVerifier:
             access_header = cast(
                 dict[str, object], jwt.get_unverified_header(access_token)
             )
+            # Cognito uses its key ID only to select a key from the pool's JWKS.
             access_key = await self._get_cognito_key(self._key_id(access_header))
             access_claims = cast(
                 dict[str, object],
@@ -105,6 +111,7 @@ class AlbCognitoIdentityVerifier:
             ValueError,
             httpx.HTTPError,
         ) as error:
+            logger.warning("Credential validation failed: %s", type(error).__name__)
             raise AuthenticationError("Credentials could not be verified.") from error
 
         assertion_subject = self._required_string(assertion_claims, "sub")
@@ -119,7 +126,13 @@ class AlbCognitoIdentityVerifier:
             raise AuthorizationError("The principal lacks the required group.")
 
         email_value = assertion_claims.get("email")
-        email = email_value if isinstance(email_value, str) else None
+        email_verified = assertion_claims.get("email_verified")
+        email = (
+            email_value
+            if isinstance(email_value, str)
+            and (email_verified is True or email_verified == "true")
+            else None
+        )
         if email is not None and len(email) > 320:
             raise AuthenticationError("The credential email is invalid.")
         return AuthenticatedPrincipal(external_subject=assertion_subject, email=email)
@@ -187,9 +200,9 @@ class AlbCognitoIdentityVerifier:
 
     @staticmethod
     def _key_id(header: dict[str, object]) -> str:
-        """Return a bounded signing-key identifier safe for URL construction."""
+        """Return a nonempty, bounded signing-key identifier."""
         key_id = header.get("kid")
-        if not isinstance(key_id, str) or _KEY_ID_PATTERN.fullmatch(key_id) is None:
+        if not isinstance(key_id, str) or not 1 <= len(key_id) <= 128:
             raise AuthenticationError("The signing-key identifier is invalid.")
         return key_id
 

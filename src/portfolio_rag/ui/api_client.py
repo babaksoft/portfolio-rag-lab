@@ -122,6 +122,18 @@ class PortfolioApiClient:
                 "The assistant is temporarily unavailable. Please try again.",
             ) from error
         except httpx.HTTPStatusError as error:
+            if error.response.status_code == 401:
+                raise ApiClientError(
+                    "authentication_required",
+                    "We could not verify your session. Sign out, then sign in again. "
+                    "If the problem continues, contact the application owner.",
+                ) from error
+            if error.response.status_code == 403:
+                raise ApiClientError(
+                    "access_denied",
+                    "Access denied. Your account is not authorized as a reviewer. "
+                    "Contact the application owner if you need access.",
+                ) from error
             code = (
                 "invalid_request" if error.response.is_client_error else "backend_error"
             )

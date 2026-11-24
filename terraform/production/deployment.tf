@@ -99,6 +99,29 @@ resource "aws_lb_listener_rule" "logout" {
   }
 }
 
+resource "aws_lb_listener_rule" "signed_out" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 2
+
+  action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/html"
+      message_body = <<-HTML
+        <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signed out</title></head><body><main><h1>Signed out</h1><p>Your application session has ended. Your Google session may still be active, so you may be signed in automatically if you return.</p><p><a href="/">Sign in again</a></p></main></body></html>
+      HTML
+      status_code  = "200"
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/signed-out"]
+    }
+  }
+}
+
 resource "aws_route53_record" "application" {
   zone_id = aws_route53_zone.main.zone_id
   name    = var.application_hostname
@@ -200,7 +223,7 @@ resource "aws_ecs_task_definition" "application" {
         },
         {
           name  = "PORTFOLIO_RAG_API_APPLICATION_URL"
-          value = "https://${var.application_hostname}"
+          value = local.signed_out_url
         },
         {
           name  = "PORTFOLIO_RAG_API_AUTHORIZED_GROUP"
