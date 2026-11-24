@@ -1,5 +1,6 @@
 """FastAPI dependency accessors for composed application objects."""
 
+import logging
 from typing import cast
 from uuid import UUID
 
@@ -16,6 +17,8 @@ from portfolio_rag.application import (
 )
 from portfolio_rag.application.services import AnswerMessageService
 from portfolio_rag.domain import Identity
+
+logger = logging.getLogger(__name__)
 
 
 def get_api_settings(request: Request) -> ApiSettings:
@@ -48,6 +51,11 @@ async def get_current_identity(
         )
 
     if identity_assertion is None or access_token is None:
+        logger.warning(
+            "Authentication credentials missing: assertion=%s access_token=%s",
+            identity_assertion is not None,
+            access_token is not None,
+        )
         raise AccessDeniedError(
             status_code=401,
             code="authentication_required",
@@ -59,6 +67,7 @@ async def get_current_identity(
     try:
         principal = await verifier.verify(identity_assertion, access_token)
     except AuthenticationError as error:
+        logger.warning("Authentication verification failed: %s", error)
         raise AccessDeniedError(
             status_code=401,
             code="invalid_authentication",

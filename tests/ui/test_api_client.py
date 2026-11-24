@@ -63,3 +63,26 @@ def test_api_client_rejects_invalid_backend_contract() -> None:
         client.answer_message("Hello")
 
     assert captured.value.code == "invalid_backend_response"
+
+
+@pytest.mark.parametrize(
+    ("status", "code", "message"),
+    [
+        (401, "authentication_required", "Sign out, then sign in again"),
+        (403, "access_denied", "not authorized as a reviewer"),
+        (500, "backend_error", "Please try again"),
+    ],
+)
+def test_api_client_distinguishes_authentication_and_backend_failures(
+    status: int, code: str, message: str
+) -> None:
+    client = PortfolioApiClient(
+        UiSettings(),
+        transport=httpx.MockTransport(lambda _request: httpx.Response(status)),
+    )
+
+    with pytest.raises(ApiClientError) as captured:
+        client.answer_message("Hello")
+
+    assert captured.value.code == code
+    assert message in captured.value.user_message

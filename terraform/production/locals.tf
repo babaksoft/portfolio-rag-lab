@@ -1,5 +1,6 @@
 locals {
-  name_prefix = "portfolio-rag-${var.environment}"
+  name_prefix    = "portfolio-rag-${var.environment}"
+  signed_out_url = "https://${var.application_hostname}/signed-out"
 
   common_tags = {
     Environment = var.environment

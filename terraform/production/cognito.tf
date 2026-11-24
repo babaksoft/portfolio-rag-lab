@@ -53,7 +53,7 @@ resource "aws_cognito_user_pool_client" "load_balancer" {
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = ["openid", "email"]
   callback_urls                        = ["https://${var.application_hostname}/oauth2/idpresponse"]
-  logout_urls                          = ["https://${var.application_hostname}"]
+  logout_urls                          = [local.signed_out_url]
   supported_identity_providers         = ["Google"]
 
   access_token_validity  = 60
