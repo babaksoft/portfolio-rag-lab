@@ -258,7 +258,9 @@ Identity Center permission set before attempting this production plan.
 After apply, add each approved Cognito user to the `reviewers` group. Merely
 authenticating with Google is insufficient for API access. Group changes take
 effect when Cognito issues a new access token; sign out and sign back in during
-verification.
+verification. Google supplies email ownership through its `email_verified`
+claim, which the identity-provider mapping copies into the Cognito profile;
+do not use Cognito's native one-time-code flow for a federated email address.
 
 To rotate the Google secret, create a new Google credential, replace only the
 Secrets Manager JSON value through an approved interactive operation, and run a
@@ -358,10 +360,11 @@ aws logs tail /ecs/portfolio-rag-production/ui --region us-east-1 --since 10m
 Open `https://portfolio-rag.babaksoft.dev`, complete Google sign-in with a user
 in `reviewers`, submit a message, and confirm the explicit placeholder response
 appears. Confirm a signed-in user outside `reviewers` receives the bounded
-authorization failure. Sign out, confirm the ALB
-session cookie is removed, and verify the next protected request returns to
-sign-in. Confirm the same Google subject retains one internal identity across a
-second session. Confirm the service reports one running
+authorization failure. Sign out, confirm the ALB session cookie is removed,
+confirm the public `/signed-out` landing page loads without restarting
+authentication, and verify its sign-in link starts a new authentication flow.
+Confirm the same Cognito subject retains one internal identity across a second
+session. Confirm the service reports one running
 and one desired task, the target group reports one healthy target, API logs show
 successful readiness checks, neither log stream contains a database password,
 and the task has no public IP. Inspect browser storage, task configuration,

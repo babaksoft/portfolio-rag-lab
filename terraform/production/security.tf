@@ -49,6 +49,15 @@ resource "aws_vpc_security_group_egress_rule" "edge_to_api_logout" {
   referenced_security_group_id = aws_security_group.application.id
 }
 
+resource "aws_vpc_security_group_egress_rule" "edge_https" {
+  security_group_id = aws_security_group.edge.id
+  description       = "HTTPS access to Cognito authentication endpoints"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
 resource "aws_vpc_security_group_ingress_rule" "application_from_edge" {
   security_group_id            = aws_security_group.application.id
   description                  = "Streamlit traffic from the future load balancer"

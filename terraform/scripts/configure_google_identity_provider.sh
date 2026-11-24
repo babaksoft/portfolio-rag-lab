@@ -49,7 +49,11 @@ print(json.dumps({
         "client_id": os.environ["GOOGLE_CLIENT_ID"],
         "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
     },
-    "AttributeMapping": {"email": "email", "username": "sub"},
+    "AttributeMapping": {
+        "email": "email",
+        "email_verified": "email_verified",
+        "username": "sub",
+    },
 }))
 ' >"${provider_input}"
 unset google_client_secret
