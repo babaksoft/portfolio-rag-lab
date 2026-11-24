@@ -2,11 +2,13 @@
 
 import streamlit as st
 
+from portfolio_rag import configure_structured_logging
 from portfolio_rag.ui import ApiClientError, PortfolioApiClient, UiSettings
 
 
 def run() -> None:
     """Render the message form and display the backend placeholder."""
+    configure_structured_logging(service="portfolio-rag-ui")
     st.set_page_config(page_title="Portfolio Retrieval Lab", page_icon="🔎")
     st.title("Portfolio Retrieval Lab")
     st.caption("Phase 0 walking skeleton — responses are placeholders, not facts.")

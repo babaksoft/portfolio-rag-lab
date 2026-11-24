@@ -1,7 +1,9 @@
 import asyncio
+import json
 from uuid import UUID
 
 import httpx
+import pytest
 
 from portfolio_rag.api import create_app
 from portfolio_rag.api.settings import ApiSettings
@@ -32,6 +34,7 @@ async def _request(
     settings: ApiSettings | None = None,
     identity_verifier: IdentityVerifier | None = None,
     identity_resolver: IdentityResolver | None = None,
+    raise_app_exceptions: bool = True,
 ) -> httpx.Response:
     transport = httpx.ASGITransport(
         app=create_app(
@@ -39,7 +42,8 @@ async def _request(
             readiness_probe=_ReadinessProbe(database_ready),
             identity_verifier=identity_verifier,
             identity_resolver=identity_resolver,
-        )
+        ),
+        raise_app_exceptions=raise_app_exceptions,
     )
     async with httpx.AsyncClient(
         transport=transport, base_url="http://testserver"
@@ -110,6 +114,30 @@ def test_message_crosses_api_boundary_with_correlation_id() -> None:
     }
 
 
+def test_request_log_is_structured_correlated_and_content_free(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/messages",
+            json={"message": "private portfolio question"},
+            headers={"X-Correlation-ID": "logged-correlation"},
+        )
+    )
+
+    records = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    request_record = next(
+        record for record in records if record["event"] == "request_completed"
+    )
+    assert response.status_code == 200
+    assert request_record["service"] == "portfolio-rag-api"
+    assert request_record["correlation_id"] == "logged-correlation"
+    assert request_record["http_path"] == "/v1/messages"
+    assert request_record["http_status"] == 200
+    assert "private portfolio question" not in json.dumps(records)
+
+
 def test_malformed_message_returns_bounded_error() -> None:
     response = asyncio.run(_request("POST", "/v1/messages", json={"message": "   "}))
 
@@ -118,6 +146,21 @@ def test_malformed_message_returns_bounded_error() -> None:
     assert response.json()["message"] == "The request payload is invalid."
     assert response.json()["correlation_id"]
     assert "input" not in response.text
+
+
+def test_unsafe_incoming_correlation_id_is_replaced() -> None:
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/messages",
+            json={"message": "Hello"},
+            headers={"X-Correlation-ID": "unsafe user content"},
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.headers["X-Correlation-ID"] != "unsafe user content"
+    assert response.json()["correlation_id"] == response.headers["X-Correlation-ID"]
 
 
 def test_health_endpoints_report_process_health() -> None:
@@ -160,7 +203,9 @@ def test_protected_message_requires_both_credentials() -> None:
     assert response.json()["code"] == "authentication_required"
 
 
-def test_protected_message_resolves_verified_internal_identity() -> None:
+def test_protected_message_resolves_verified_internal_identity(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     resolver = _IdentityResolver()
     response = asyncio.run(
         _request(
@@ -168,6 +213,7 @@ def test_protected_message_resolves_verified_internal_identity() -> None:
             "/v1/messages",
             json={"message": "Hello"},
             headers={
+                "X-Correlation-ID": "authenticated-correlation",
                 "X-Amzn-Oidc-Data": "signed-edge-assertion",
                 "X-Amzn-Oidc-AccessToken": "signed-access-token",
             },
@@ -180,6 +226,10 @@ def test_protected_message_resolves_verified_internal_identity() -> None:
     assert response.status_code == 200
     assert resolver.principal is not None
     assert resolver.principal.external_subject == "stable-subject"
+    records = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    for event in ("authentication_verified", "identity_resolved"):
+        record = next(item for item in records if item["event"] == event)
+        assert record["correlation_id"] == "authenticated-correlation"
 
 
 def test_invalid_or_unauthorized_credentials_fail_safely() -> None:
@@ -205,6 +255,39 @@ def test_invalid_or_unauthorized_credentials_fail_safely() -> None:
         assert response.status_code == expected_status
         assert "forged" not in response.text
         assert "not a reviewer" not in response.text
+
+
+class _FailingIdentityResolver:
+    async def execute(self, principal: AuthenticatedPrincipal) -> Identity:
+        del principal
+        raise RuntimeError("database password must stay private")
+
+
+def test_unexpected_failure_returns_bounded_correlated_error() -> None:
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/messages",
+            json={"message": "Hello"},
+            headers={
+                "X-Correlation-ID": "failure-correlation",
+                "X-Amzn-Oidc-Data": "signed-edge-assertion",
+                "X-Amzn-Oidc-AccessToken": "signed-access-token",
+            },
+            settings=_authenticated_settings(),
+            identity_verifier=_IdentityVerifier(),
+            identity_resolver=_FailingIdentityResolver(),
+            raise_app_exceptions=False,
+        )
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "code": "internal_error",
+        "message": "The request could not be completed.",
+        "correlation_id": "failure-correlation",
+    }
+    assert "database password" not in response.text
 
 
 def test_logout_expires_alb_cookie_shards_and_uses_cognito() -> None:

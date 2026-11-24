@@ -369,7 +369,7 @@ identity claims are not trusted.
 
 ## Slice 8 — Operational readiness
 
-**Status:** Not started
+**Status:** Local implementation prepared; live verification pending
 
 ### Outcome
 

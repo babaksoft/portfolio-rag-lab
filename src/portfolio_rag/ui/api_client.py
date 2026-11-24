@@ -1,5 +1,7 @@
 """Typed task-oriented HTTP client owned by the Streamlit adapter."""
 
+import logging
+from time import perf_counter
 from typing import Literal
 from uuid import uuid4
 
@@ -11,6 +13,7 @@ from portfolio_rag.ui.settings import UiSettings
 CORRELATION_HEADER = "X-Correlation-ID"
 IDENTITY_ASSERTION_HEADER = "X-Amzn-Oidc-Data"
 ACCESS_TOKEN_HEADER = "X-Amzn-Oidc-AccessToken"
+logger = logging.getLogger(__name__)
 
 
 class _MessagePayload(BaseModel):
@@ -97,6 +100,7 @@ class PortfolioApiClient:
                 If the backend is unavailable or violates its contract.
         """
         request_correlation_id = correlation_id or str(uuid4())
+        started_at = perf_counter()
         payload = _MessagePayload(message=message)
         headers = {CORRELATION_HEADER: request_correlation_id}
         if identity_assertion is not None:
@@ -117,18 +121,23 @@ class PortfolioApiClient:
                 )
                 response.raise_for_status()
         except httpx.RequestError as error:
+            _log_failure(request_correlation_id, "backend_unavailable", started_at)
             raise ApiClientError(
                 "backend_unavailable",
                 "The assistant is temporarily unavailable. Please try again.",
             ) from error
         except httpx.HTTPStatusError as error:
             if error.response.status_code == 401:
+                _log_failure(
+                    request_correlation_id, "authentication_required", started_at
+                )
                 raise ApiClientError(
                     "authentication_required",
                     "We could not verify your session. Sign out, then sign in again. "
                     "If the problem continues, contact the application owner.",
                 ) from error
             if error.response.status_code == 403:
+                _log_failure(request_correlation_id, "access_denied", started_at)
                 raise ApiClientError(
                     "access_denied",
                     "Access denied. Your account is not authorized as a reviewer. "
@@ -137,15 +146,43 @@ class PortfolioApiClient:
             code = (
                 "invalid_request" if error.response.is_client_error else "backend_error"
             )
+            _log_failure(request_correlation_id, code, started_at)
             raise ApiClientError(
                 code,
                 "The assistant could not process that request. Please try again.",
             ) from error
 
         try:
-            return MessageResult.model_validate(response.json())
+            result = MessageResult.model_validate(response.json())
         except (ValueError, ValidationError) as error:
+            _log_failure(request_correlation_id, "invalid_backend_response", started_at)
             raise ApiClientError(
                 "invalid_backend_response",
                 "The assistant returned an invalid response. Please try again.",
             ) from error
+
+        logger.info(
+            "backend_request_completed",
+            extra={
+                "event": "backend_request_completed",
+                "correlation_id": request_correlation_id,
+                "duration_ms": round((perf_counter() - started_at) * 1000, 2),
+                "http_status": response.status_code,
+                "outcome": "success",
+            },
+        )
+        return result
+
+
+def _log_failure(correlation_id: str, error_code: str, started_at: float) -> None:
+    """Log a safe, correlated backend failure without request or credentials."""
+    logger.warning(
+        "backend_request_failed",
+        extra={
+            "event": "backend_request_failed",
+            "correlation_id": correlation_id,
+            "duration_ms": round((perf_counter() - started_at) * 1000, 2),
+            "error_code": error_code,
+            "outcome": "failure",
+        },
+    )

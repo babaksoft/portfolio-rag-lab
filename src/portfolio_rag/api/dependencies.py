@@ -52,9 +52,11 @@ async def get_current_identity(
 
     if identity_assertion is None or access_token is None:
         logger.warning(
-            "Authentication credentials missing: assertion=%s access_token=%s",
-            identity_assertion is not None,
-            access_token is not None,
+            "Authentication credentials missing",
+            extra={
+                "event": "authentication_missing",
+                "error_code": "authentication_required",
+            },
         )
         raise AccessDeniedError(
             status_code=401,
@@ -67,17 +69,30 @@ async def get_current_identity(
     try:
         principal = await verifier.verify(identity_assertion, access_token)
     except AuthenticationError as error:
-        logger.warning("Authentication verification failed: %s", error)
+        logger.warning(
+            "Authentication verification failed",
+            extra={
+                "event": "authentication_failed",
+                "error_code": "invalid_authentication",
+            },
+        )
         raise AccessDeniedError(
             status_code=401,
             code="invalid_authentication",
             message="Authentication could not be verified.",
         ) from error
     except AuthorizationError as error:
+        logger.warning(
+            "Authorization verification failed",
+            extra={"event": "authorization_denied", "error_code": "access_denied"},
+        )
         raise AccessDeniedError(
             status_code=403,
             code="access_denied",
             message="This account is not authorized.",
         ) from error
 
-    return await resolver.execute(principal)
+    logger.info("Authentication verified", extra={"event": "authentication_verified"})
+    identity = await resolver.execute(principal)
+    logger.info("Identity resolved", extra={"event": "identity_resolved"})
+    return identity

@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 
+from portfolio_rag import configure_structured_logging
 from portfolio_rag.api.correlation import propagate_correlation_id
 from portfolio_rag.api.errors import (
     AccessDeniedError,
@@ -43,6 +44,10 @@ def create_app(
         Configured FastAPI application.
     """
     api_settings = settings or ApiSettings()
+    configure_structured_logging(
+        service=api_settings.service_name,
+        level=api_settings.log_level,
+    )
     database = None
     if readiness_probe is None:
         database = Database(

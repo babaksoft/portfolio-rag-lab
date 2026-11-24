@@ -44,6 +44,8 @@ class ApiSettings(BaseSettings):
             Cognito managed-login domain used for sign-out.
         application_url:
             Public application URL allowed as the Cognito logout destination.
+        log_level:
+            Minimum severity emitted by application structured logging.
     """
 
     model_config = SettingsConfigDict(
@@ -149,6 +151,10 @@ class ApiSettings(BaseSettings):
         default=None,
         max_length=2048,
         description="Public HTTPS application URL used after Cognito sign-out.",
+    )
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
+        default="INFO",
+        description="Minimum severity emitted by application structured logging.",
     )
 
     @model_validator(mode="after")

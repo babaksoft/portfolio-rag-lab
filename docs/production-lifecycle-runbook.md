@@ -5,6 +5,10 @@ environment. Use it when an interactive coding session is unavailable or low
 on usage credit. It covers manual reconstruction, activation, smoke testing,
 rollback, suspension, and full teardown.
 
+Use the [operational readiness runbook](operational-readiness-runbook.md) for
+alarm response, correlated-log diagnosis, failure drills, backup and rotation
+verification, the final Phase 0 checklist, and the known-risk record.
+
 The Google OAuth flow was verified on 2026-11-24 with application revision
 `dfa93e0128102bf181ac48a53df8ecd34867d954`. A complete verification includes
 Google sign-in, one placeholder message, same-tab sign-out to `/signed-out`,
