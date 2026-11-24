@@ -1,10 +1,6 @@
 resource "aws_route53_zone" "main" {
   name    = var.hosted_zone_name
   comment = "HostedZone created by Route53 Registrar"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_acm_certificate" "application" {

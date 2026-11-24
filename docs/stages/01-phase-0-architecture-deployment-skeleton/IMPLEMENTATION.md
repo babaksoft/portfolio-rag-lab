@@ -296,6 +296,24 @@ durable design documents rather than repeating them here.
   browser sign-in, session continuation, sign-out, leakage inspection, and
   stable-identity smoke checks remain pending explicit live approval.
 
+### 2026-11-24 — Slice 7 live activation verified
+
+- Activated Google federation and verified reviewer sign-in, stable internal
+  identity resolution, one protected placeholder exchange, same-tab sign-out
+  to `/signed-out`, sign-in again, and a second protected exchange with
+  application revision `dfa93e0128102bf181ac48a53df8ecd34867d954`.
+- Accepted Google session reuse after application sign-out as expected OAuth
+  behavior; Slice 7 does not promise Google account selection or global Google
+  logout. Deferred proactive stale-tab synchronization and automatic expiry
+  navigation until the UI has meaningful authenticated state. FastAPI still
+  verifies token expiry on every protected operation and returns a bounded 401.
+- Made the production root deliberately disposable between infrequent live
+  test windows. Provider deletion protection and Terraform `prevent_destroy`
+  guards remain disabled for RDS, ALB, Cognito, and the hosted zone; the remote
+  state bucket and bootstrap IAM boundaries remain protected. This accepts
+  lengthy staged reconstruction, Cognito user recreation, and Route 53
+  redelegation in exchange for avoiding idle infrastructure cost.
+
 ## Deviations
 
 None.
@@ -329,6 +347,15 @@ None.
 
 - The UI shows only the current exchange; durable conversation identity and
   history remain deferred until a use case requires them.
+- Application sign-out does not terminate the upstream Google session or
+  proactively invalidate already-open Streamlit tabs. Existing credentials are
+  rejected when they expire; cross-tab synchronization is deferred until the
+  application has meaningful authenticated state.
+- The production application root is destroyed between infrequent live test
+  windows. Its deletion guards remain disabled, while durable Terraform state
+  and bootstrap IAM controls stay protected. Provisioning is a staged manual
+  operation because DNS delegation and Google secret population require human
+  input.
 - The AWS provider's Cognito identity-provider resource stores Google provider
   details in Terraform state. A secret-safe, idempotent apply-time reconciler
   therefore manages that one provider binding while Terraform owns the user

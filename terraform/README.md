@@ -192,8 +192,8 @@ Before approval, verify the account and region and review:
   ingress is application-group to TCP 5432;
 - IAM has no broad action except the resource-independent ECR authorization
   token call, and secret access names only the two runtime secrets;
-- RDS is encrypted, single-AZ, backed up for seven days, deletion-protected,
-  and will take a final snapshot;
+- RDS is encrypted, single-AZ, backed up for seven days, and will take the
+  uniquely named final snapshot configured for the next teardown;
 - no secret values appear in configuration, outputs, or the plan;
 - the plan has no unexpected replacement or destruction.
 
@@ -201,11 +201,13 @@ The expected production region is `us-east-1`. Do not approve a plan whose
 provider or backend resolves to another region, even if the active CLI profile
 defaults elsewhere.
 
-The Terraform operator deliberately cannot create or delete hosted zones. After
-Route 53 registration creates the zone, put its ID in the reviewed bootstrap
-inputs, apply the resulting boundary update, reprovision the Identity Center
-permission set, and import the zone with the restricted operator before the
-first production plan:
+The routine Terraform operator deliberately cannot create or delete hosted
+zones. A reconstruction after full teardown therefore needs a separately
+approved identity that can create the production zone. Apply a reviewed saved
+plan containing only `aws_route53_zone.main`, copy its four name servers to the
+registered domain, and wait for public delegation before planning the rest of
+the root. Import an existing replacement zone instead when one was created
+outside this root:
 
 ```sh
 terraform -chdir=terraform/production import \
@@ -214,9 +216,9 @@ terraform -chdir=terraform/production import \
 ```
 
 The import changes Terraform state, not the live DNS records. Confirm the next
-saved plan preserves the imported zone ID, registrar comment, and name servers;
-only the standard project tags should change on that zone. ACM validation then
-uses a record within the already delegated zone.
+saved plan preserves the imported zone ID, registrar comment, and name servers.
+ACM validation can complete only after the registrar delegates to that exact
+zone; recreating a deleted zone does not reuse its prior name servers.
 
 Apply only the exact reviewed plan after explicit approval:
 
@@ -403,9 +405,23 @@ no standby. RDS backups and a final snapshot improve recoverability but do not
 provide high availability. ECR retains only the newest 20 images; CloudWatch
 logs retain 30 days.
 
-For an approved teardown, first retain required state, database snapshots, and
-image references. Change `database_deletion_protection` to false and remove the
-database `prevent_destroy` lifecycle guard in a separately reviewed change.
-Review a saved destroy plan before running it. The state bucket has its own
-`prevent_destroy` guard and must remain until all managed infrastructure and
-state retention obligations are resolved. Never bypass either guard ad hoc.
+The Phase 0 production root is deliberately disposable while live test windows
+are infrequent. RDS, the load balancer, Cognito, and the hosted zone therefore
+have provider deletion protection and Terraform `prevent_destroy` disabled.
+This accepts long reconstruction time, loss of Cognito users and group
+membership, and manual Route 53 registrar redelegation in exchange for avoiding
+idle RDS, NAT gateway, load-balancer, and related charges.
+
+Each reconstruction receives a timestamped RDS final-snapshot identifier and
+application-secret name that later plans ignore. Retained snapshots and secrets
+in their recovery windows therefore cannot block the next reconstruction or
+teardown. Retain required state, final snapshots, immutable image references,
+the Google OAuth credential, and the registered domain. Review and save a
+complete destroy plan, then apply that exact artifact manually. The separately
+bootstrapped Terraform state bucket and IAM permission boundaries retain their
+`prevent_destroy` guards and are not part of routine production teardown.
+
+Follow the [production lifecycle runbook](../docs/production-lifecycle-runbook.md)
+for manual provision, smoke testing, rollback, suspension, and full teardown.
+Never approximate a cold environment with targeted destroys, state removal, or
+manual deletion of Terraform-managed resources.

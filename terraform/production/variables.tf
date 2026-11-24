@@ -54,12 +54,6 @@ variable "database_instance_class" {
   default     = "db.t4g.micro"
 }
 
-variable "database_deletion_protection" {
-  description = "Protect the production database from Terraform deletion; disable only during an approved teardown."
-  type        = bool
-  default     = true
-}
-
 variable "ecs_task_permissions_boundary_arn" {
   description = "Bootstrap-managed boundary that every ECS execution or application task role must retain."
   type        = string

@@ -1,6 +1,6 @@
 resource "aws_cognito_user_pool" "application" {
   name                     = local.name_prefix
-  deletion_protection      = "ACTIVE"
+  deletion_protection      = "INACTIVE"
   auto_verified_attributes = ["email"]
   username_attributes      = ["email"]
 

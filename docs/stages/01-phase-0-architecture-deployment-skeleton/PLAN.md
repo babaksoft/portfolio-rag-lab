@@ -319,7 +319,7 @@ unchanged.
 
 ## Slice 7 — Cognito and internal identity foundation
 
-**Status:** Implemented locally; live activation and verification pending
+**Status:** Complete (2026-11-24)
 
 ### Outcome
 
