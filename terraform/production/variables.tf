@@ -96,6 +96,29 @@ variable "service_desired_count" {
   }
 }
 
+variable "log_retention_days" {
+  description = "CloudWatch application-log retention in days. Keep bounded to control cost and data lifetime."
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = contains([14, 30, 60, 90], var.log_retention_days)
+    error_message = "log_retention_days must be one of 14, 30, 60, or 90."
+  }
+}
+
+variable "operations_alarm_email" {
+  description = "Optional operator email subscribed to production alarms; confirmation is required before delivery starts."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.operations_alarm_email == null || can(regex("^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$", var.operations_alarm_email))
+    error_message = "operations_alarm_email must be null or a plausible email address."
+  }
+}
+
 variable "google_oauth_client_id" {
   description = "Public Google OAuth client ID federated through Cognito; its secret is read directly from Secrets Manager during apply."
   type        = string

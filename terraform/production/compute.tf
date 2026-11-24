@@ -67,10 +67,10 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
 
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/ecs/${local.name_prefix}/api"
-  retention_in_days = 30
+  retention_in_days = var.log_retention_days
 }
 
 resource "aws_cloudwatch_log_group" "ui" {
   name              = "/ecs/${local.name_prefix}/ui"
-  retention_in_days = 30
+  retention_in_days = var.log_retention_days
 }

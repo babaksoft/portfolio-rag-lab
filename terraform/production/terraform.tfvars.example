@@ -5,6 +5,8 @@ application_hostname = "portfolio-rag.babaksoft.dev"
 google_oauth_client_id = "replace-with-google-web-client-id.apps.googleusercontent.com"
 
 # Review these cost and recovery settings before planning.
+log_retention_days = 30
+# operations_alarm_email = "operator@example.com"
 database_instance_class = "db.t4g.micro"
 vpc_cidr                = "10.20.0.0/16"
 ecs_task_permissions_boundary_arn = "arn:aws:iam::509399640122:policy/portfolio-rag/PortfolioRagEcsTaskBoundary"

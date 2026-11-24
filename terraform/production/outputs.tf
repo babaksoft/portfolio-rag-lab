@@ -105,3 +105,8 @@ output "ecs_service_name" {
   description = "ECS service restored to desired count one after task failure."
   value       = aws_ecs_service.application.name
 }
+
+output "operations_alarm_topic_arn" {
+  description = "SNS topic receiving production alarm and recovery notifications."
+  value       = aws_sns_topic.operations.arn
+}

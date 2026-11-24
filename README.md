@@ -124,8 +124,13 @@ authorizes again in FastAPI; local development explicitly leaves authentication
 disabled. The terminal-first
 [`production lifecycle runbook`](docs/production-lifecycle-runbook.md) records
 manual reconstruction, activation, smoke testing, rollback, suspension, and
-full teardown commands for use without an active coding-agent session. Run
-local Terraform formatting and validation checks with:
+full teardown commands for use without an active coding-agent session.
+
+Operational diagnosis, alarms, failure drills, backup and secret-rotation
+checks, final smoke verification, and accepted availability risks are in the
+[`operational readiness runbook`](docs/operational-readiness-runbook.md).
+
+Run local Terraform formatting and validation checks with:
 
 ```sh
 ./scripts/terraform_quality.sh

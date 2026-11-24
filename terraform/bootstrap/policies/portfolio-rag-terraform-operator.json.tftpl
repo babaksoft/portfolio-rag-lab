@@ -28,14 +28,12 @@
         "rds:ListTagsForResource",
         "route53:GetChange",
         "route53:GetHostedZone",
-        "route53:ListHostedZones",
-        "route53:ListHostedZonesByName",
+        "route53:ListHostedZones*",
         "route53:ListResourceRecordSets",
         "route53:ListTagsForResource",
         "secretsmanager:DescribeSecret",
         "secretsmanager:GetResourcePolicy",
-        "secretsmanager:ListSecrets",
-        "secretsmanager:ListSecretVersionIds",
+        "secretsmanager:ListSecret*",
         "sts:GetCallerIdentity"
       ],
       "Resource": "*"
@@ -96,6 +94,8 @@
         "cognito-idp:ListTagsForResource",
         "cognito-idp:TagResource",
         "cognito-idp:UntagResource",
+        "cloudwatch:*Alarm*",
+        "cloudwatch:ListTagsForResource",
         "ecr:CreateRepository",
         "ecr:DeleteLifecyclePolicy",
         "ecr:DeleteRepository",
@@ -138,6 +138,7 @@
         "rds:AddTagsToResource",
         "rds:CreateDBInstance",
         "rds:CreateDBSubnetGroup",
+        "rds:*EventSubscription",
         "rds:DeleteDBInstance",
         "rds:DeleteDBSubnetGroup",
         "rds:ModifyDBInstance",
@@ -147,7 +148,10 @@
         "secretsmanager:DeleteSecret",
         "secretsmanager:TagResource",
         "secretsmanager:UntagResource",
-        "secretsmanager:UpdateSecret"
+        "secretsmanager:UpdateSecret",
+        "sns:*Topic*",
+        "sns:*scribe",
+        "sns:ListTagsForResource"
       ],
       "Resource": "*",
       "Condition": {

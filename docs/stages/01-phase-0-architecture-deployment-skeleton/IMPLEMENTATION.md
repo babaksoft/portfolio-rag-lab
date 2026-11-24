@@ -314,6 +314,35 @@ durable design documents rather than repeating them here.
   lengthy staged reconstruction, Cognito user recreation, and Route 53
   redelegation in exchange for avoiding idle infrastructure cost.
 
+### 2026-11-24 — Slice 8 operational readiness prepared locally
+
+- Added bounded JSON application logging with stable event names, service and
+  severity fields, request latency and outcome metadata, safe correlation
+  propagation, and explicit authentication, authorization, identity, database,
+  client, and unexpected-failure categories. Raw user content, credentials,
+  identity attributes, and exception details are excluded by construction.
+- Added Terraform-managed SNS routing and actionable ECS, load-balancer, and
+  RDS alarms, including database lifecycle events. Alarm descriptions name the
+  repository owner and point to the incident procedure; email delivery remains
+  optional and requires subscription confirmation. Expanded the bootstrap
+  operator boundary only for those CloudWatch, SNS, and RDS event-subscription
+  lifecycles and added matching read access to the GitHub planning role; the
+  rendered operator policy remains below IAM's managed-policy size quota.
+- Made CloudWatch retention explicit and bounded while retaining the existing
+  seven-day automated RDS backup, final-snapshot, health-check, deployment
+  rollback, and separate migration controls.
+- Added the operational readiness runbook covering health semantics,
+  correlation queries, alarm triage, representative failure drills, backup and
+  restore evidence, migration and rotation paths, current-cost review, the
+  final smoke checklist, and accepted single-task risks.
+- `./scripts/quality.sh` passed with 31 tests and the opt-in database integration
+  test skipped because its isolated URL was not configured. Terraform formatting
+  and validation for both roots, shell syntax, rendered-policy JSON validation,
+  the IAM managed-policy size check, and `git diff --check` also passed. Live
+  alarm transitions, failure drills, isolated backup restore, rotation checks,
+  current cost evidence, leakage review, and the complete authenticated smoke
+  test remain pending an explicitly approved active window.
+
 ## Deviations
 
 None.

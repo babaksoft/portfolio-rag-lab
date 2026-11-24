@@ -1,6 +1,7 @@
 """Asynchronous SQLAlchemy database lifecycle."""
 
 import asyncio
+import logging
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -9,6 +10,8 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -55,6 +58,14 @@ class Database:
                 async with self._engine.connect() as connection:
                     await connection.execute(text("SELECT 1"))
         except Exception:  # Readiness must safely collapse adapter failures.
+            logger.warning(
+                "Database readiness failed",
+                extra={
+                    "event": "dependency_unavailable",
+                    "error_code": "database_unavailable",
+                    "outcome": "failure",
+                },
+            )
             return False
 
         return True
