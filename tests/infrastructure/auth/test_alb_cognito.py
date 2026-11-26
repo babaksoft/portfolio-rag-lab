@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+from functools import partial
 
 import httpx
 import jwt
@@ -20,6 +21,18 @@ ALB_ARN = (
     "arn:aws:elasticloadbalancing:us-east-1:123456789012:"
     "loadbalancer/app/portfolio/1234"
 )
+
+
+def _signing_key_response(
+    request: httpx.Request, *, responses: dict[str, httpx.Response]
+) -> httpx.Response:
+    if request.url.path in responses:
+        return responses[request.url.path]
+    return httpx.Response(404)
+
+
+def _fail_signing_key_request(request: httpx.Request) -> httpx.Response:
+    raise httpx.ConnectError("Signing keys unavailable.", request=request)
 
 
 def _credentials(
@@ -65,13 +78,14 @@ def _credentials(
         headers={"kid": COGNITO_KEY_ID},
     )
 
-    def respond(request: httpx.Request) -> httpx.Response:
-        if request.url.path == "/alb-key":
-            return httpx.Response(200, content=alb_public_key)
-        assert request.url.path == f"/{POOL_ID}/.well-known/jwks.json"
-        return httpx.Response(200, json={"keys": [cognito_jwk]})
-
-    return assertion, access_token, httpx.MockTransport(respond)
+    responses = {
+        "/alb-key": httpx.Response(200, content=alb_public_key),
+        f"/{POOL_ID}/.well-known/jwks.json": httpx.Response(
+            200, json={"keys": [cognito_jwk]}
+        ),
+    }
+    transport = httpx.MockTransport(partial(_signing_key_response, responses=responses))
+    return assertion, access_token, transport
 
 
 def _verifier(transport: httpx.MockTransport) -> AlbCognitoIdentityVerifier:
@@ -103,14 +117,10 @@ def test_rejects_verified_principal_outside_reviewers() -> None:
 
 def test_rejects_credentials_when_signing_keys_are_unavailable() -> None:
     assertion, access_token, _transport = _credentials(["reviewers"])
-
-    def fail(request: httpx.Request) -> httpx.Response:
-        raise httpx.ConnectError("Signing keys unavailable.", request=request)
+    verifier = _verifier(httpx.MockTransport(_fail_signing_key_request))
 
     with pytest.raises(AuthenticationError, match="Credentials could not be verified"):
-        asyncio.run(
-            _verifier(httpx.MockTransport(fail)).verify(assertion, access_token)
-        )
+        asyncio.run(verifier.verify(assertion, access_token))
 
 
 @pytest.mark.parametrize("email_verified", [False, "false"])

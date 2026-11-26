@@ -1,16 +1,18 @@
+from unittest.mock import Mock
+
 import httpx
 import pytest
 
 from portfolio_rag.ui import ApiClientError, PortfolioApiClient, UiSettings
 
 
+def _fail_request(_request: httpx.Request) -> httpx.Response:
+    raise httpx.ConnectError("private diagnostic detail")
+
+
 def test_api_client_sends_and_returns_typed_message() -> None:
-    def handle_request(request: httpx.Request) -> httpx.Response:
-        assert request.headers["X-Correlation-ID"] == "ui-correlation"
-        assert request.headers["X-Amzn-Oidc-Data"] == "edge-assertion"
-        assert request.headers["X-Amzn-Oidc-AccessToken"] == "access-token"
-        assert request.content == b'{"message":"Hello"}'
-        return httpx.Response(
+    handle_request = Mock(
+        return_value=httpx.Response(
             200,
             json={
                 "answer": "Placeholder response",
@@ -18,7 +20,7 @@ def test_api_client_sends_and_returns_typed_message() -> None:
                 "correlation_id": "ui-correlation",
             },
         )
-
+    )
     client = PortfolioApiClient(
         UiSettings(), transport=httpx.MockTransport(handle_request)
     )
@@ -30,17 +32,20 @@ def test_api_client_sends_and_returns_typed_message() -> None:
         access_token="access-token",
     )
 
+    assert handle_request.call_count == 1
+    (request,) = handle_request.call_args.args
+    assert request.headers["X-Correlation-ID"] == "ui-correlation"
+    assert request.headers["X-Amzn-Oidc-Data"] == "edge-assertion"
+    assert request.headers["X-Amzn-Oidc-AccessToken"] == "access-token"
+    assert request.content == b'{"message":"Hello"}'
     assert result.answer == "Placeholder response"
     assert result.is_placeholder is True
     assert result.correlation_id == "ui-correlation"
 
 
 def test_api_client_translates_unavailable_backend() -> None:
-    def fail_request(_request: httpx.Request) -> httpx.Response:
-        raise httpx.ConnectError("private diagnostic detail")
-
     client = PortfolioApiClient(
-        UiSettings(), transport=httpx.MockTransport(fail_request)
+        UiSettings(), transport=httpx.MockTransport(_fail_request)
     )
 
     with pytest.raises(ApiClientError) as captured:
@@ -55,7 +60,7 @@ def test_api_client_translates_unavailable_backend() -> None:
 
 def test_api_client_rejects_invalid_backend_contract() -> None:
     transport = httpx.MockTransport(
-        lambda _request: httpx.Response(200, json={"answer": "untyped"})
+        Mock(return_value=httpx.Response(200, json={"answer": "untyped"}))
     )
     client = PortfolioApiClient(UiSettings(), transport=transport)
 
@@ -78,7 +83,7 @@ def test_api_client_distinguishes_authentication_and_backend_failures(
 ) -> None:
     client = PortfolioApiClient(
         UiSettings(),
-        transport=httpx.MockTransport(lambda _request: httpx.Response(status)),
+        transport=httpx.MockTransport(Mock(return_value=httpx.Response(status))),
     )
 
     with pytest.raises(ApiClientError) as captured:
