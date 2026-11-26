@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from functools import partial
 
 from fastapi import FastAPI
 
@@ -15,6 +16,18 @@ from portfolio_rag.application.services import (
 from portfolio_rag.composition.database_url import resolve_database_url
 from portfolio_rag.infrastructure.auth import AlbCognitoIdentityVerifier
 from portfolio_rag.infrastructure.db import Database, DbIdentityRepository
+
+
+@asynccontextmanager
+async def _lifespan(
+    application: FastAPI, *, database: Database | None
+) -> AsyncGenerator[None, None]:
+    """Release process-owned database connections on shutdown."""
+    try:
+        yield
+    finally:
+        if database is not None:
+            await database.dispose()
 
 
 def create_app(
@@ -79,20 +92,11 @@ def create_app(
                 DbIdentityRepository(database.sessions)
             )
 
-    @asynccontextmanager
-    async def lifespan(_application: FastAPI) -> AsyncGenerator[None, None]:
-        """Release process-owned database connections on shutdown."""
-        try:
-            yield
-        finally:
-            if database is not None:
-                await database.dispose()
-
     return build_app(
         settings=api_settings,
         answer_message_service=AnswerMessageService(),
         readiness_probe=readiness_probe,
         identity_verifier=identity_verifier,
         identity_resolver=identity_resolver,
-        lifespan=lifespan,
+        lifespan=partial(_lifespan, database=database),
     )

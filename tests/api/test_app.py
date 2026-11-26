@@ -1,4 +1,3 @@
-import asyncio
 import json
 from uuid import UUID
 
@@ -15,6 +14,8 @@ from portfolio_rag.application import (
 from portfolio_rag.composition import create_app
 from portfolio_rag.domain import AuthenticatedPrincipal, Identity
 
+pytestmark = [pytest.mark.anyio, pytest.mark.parametrize("anyio_backend", ["asyncio"])]
+
 
 class _ReadinessProbe:
     def __init__(self, ready: bool) -> None:
@@ -24,42 +25,33 @@ class _ReadinessProbe:
         return self._ready
 
 
-async def _request(
-    method: str,
-    path: str,
+def _api_client(
     *,
-    json: dict[str, str] | None = None,
-    headers: dict[str, str] | None = None,
     database_ready: bool = True,
     settings: ApiSettings | None = None,
     identity_verifier: IdentityVerifier | None = None,
     identity_resolver: IdentityResolver | None = None,
     raise_app_exceptions: bool = True,
-) -> httpx.Response:
-    transport = httpx.ASGITransport(
-        app=create_app(
-            settings=settings,
-            readiness_probe=_ReadinessProbe(database_ready),
-            identity_verifier=identity_verifier,
-            identity_resolver=identity_resolver,
-        ),
-        raise_app_exceptions=raise_app_exceptions,
+) -> httpx.AsyncClient:
+    app = create_app(
+        settings=settings,
+        readiness_probe=_ReadinessProbe(database_ready),
+        identity_verifier=identity_verifier,
+        identity_resolver=identity_resolver,
     )
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://testserver"
-    ) as client:
-        return await client.request(method, path, json=json, headers=headers)
+    transport = httpx.ASGITransport(app=app, raise_app_exceptions=raise_app_exceptions)
+    return httpx.AsyncClient(transport=transport, base_url="http://testserver")
 
 
 class _IdentityVerifier:
     def __init__(self, failure: Exception | None = None) -> None:
         self._failure = failure
+        self.credentials: tuple[str, str] | None = None
 
     async def verify(
         self, identity_assertion: str, access_token: str
     ) -> AuthenticatedPrincipal:
-        assert identity_assertion == "signed-edge-assertion"
-        assert access_token == "signed-access-token"
+        self.credentials = (identity_assertion, access_token)
         if self._failure is not None:
             raise self._failure
         return AuthenticatedPrincipal(
@@ -92,15 +84,13 @@ def _authenticated_settings() -> ApiSettings:
     )
 
 
-def test_message_crosses_api_boundary_with_correlation_id() -> None:
-    response = asyncio.run(
-        _request(
-            "POST",
+async def test_message_crosses_api_boundary_with_correlation_id() -> None:
+    async with _api_client() as client:
+        response = await client.post(
             "/v1/messages",
             json={"message": "What did you build?"},
             headers={"X-Correlation-ID": "test-correlation"},
         )
-    )
 
     assert response.status_code == 200
     assert response.headers["X-Correlation-ID"] == "test-correlation"
@@ -114,17 +104,15 @@ def test_message_crosses_api_boundary_with_correlation_id() -> None:
     }
 
 
-def test_request_log_is_structured_correlated_and_content_free(
+async def test_request_log_is_structured_correlated_and_content_free(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    response = asyncio.run(
-        _request(
-            "POST",
+    async with _api_client() as client:
+        response = await client.post(
             "/v1/messages",
             json={"message": "private portfolio question"},
             headers={"X-Correlation-ID": "logged-correlation"},
         )
-    )
 
     records = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
     request_record = next(
@@ -138,8 +126,9 @@ def test_request_log_is_structured_correlated_and_content_free(
     assert "private portfolio question" not in json.dumps(records)
 
 
-def test_malformed_message_returns_bounded_error() -> None:
-    response = asyncio.run(_request("POST", "/v1/messages", json={"message": "   "}))
+async def test_malformed_message_returns_bounded_error() -> None:
+    async with _api_client() as client:
+        response = await client.post("/v1/messages", json={"message": "   "})
 
     assert response.status_code == 422
     assert response.json()["code"] == "invalid_request"
@@ -148,35 +137,32 @@ def test_malformed_message_returns_bounded_error() -> None:
     assert "input" not in response.text
 
 
-def test_unsafe_incoming_correlation_id_is_replaced() -> None:
-    response = asyncio.run(
-        _request(
-            "POST",
+async def test_unsafe_incoming_correlation_id_is_replaced() -> None:
+    async with _api_client() as client:
+        response = await client.post(
             "/v1/messages",
             json={"message": "Hello"},
             headers={"X-Correlation-ID": "unsafe user content"},
         )
-    )
 
     assert response.status_code == 200
     assert response.headers["X-Correlation-ID"] != "unsafe user content"
     assert response.json()["correlation_id"] == response.headers["X-Correlation-ID"]
 
 
-def test_health_endpoints_report_process_health() -> None:
+async def test_health_endpoints_report_process_health() -> None:
     for path in ("/health/live", "/health/ready"):
-        response = asyncio.run(_request("GET", path))
+        async with _api_client() as client:
+            response = await client.get(path)
         assert response.status_code == 200
         assert response.json() == {"status": "ok", "service": "portfolio-rag-api"}
 
 
-def test_failed_readiness_does_not_change_liveness() -> None:
-    readiness_response = asyncio.run(
-        _request("GET", "/health/ready", database_ready=False)
-    )
-    liveness_response = asyncio.run(
-        _request("GET", "/health/live", database_ready=False)
-    )
+async def test_failed_readiness_does_not_change_liveness() -> None:
+    async with _api_client(database_ready=False) as client:
+        readiness_response = await client.get("/health/ready")
+    async with _api_client(database_ready=False) as client:
+        liveness_response = await client.get("/health/live")
 
     assert readiness_response.status_code == 503
     assert readiness_response.json() == {
@@ -187,29 +173,29 @@ def test_failed_readiness_does_not_change_liveness() -> None:
     assert liveness_response.json()["status"] == "ok"
 
 
-def test_protected_message_requires_both_credentials() -> None:
-    response = asyncio.run(
-        _request(
-            "POST",
-            "/v1/messages",
-            json={"message": "Hello"},
-            settings=_authenticated_settings(),
-            identity_verifier=_IdentityVerifier(),
-            identity_resolver=_IdentityResolver(),
-        )
-    )
+async def test_protected_message_requires_both_credentials() -> None:
+    async with _api_client(
+        settings=_authenticated_settings(),
+        identity_verifier=_IdentityVerifier(),
+        identity_resolver=_IdentityResolver(),
+    ) as client:
+        response = await client.post("/v1/messages", json={"message": "Hello"})
 
     assert response.status_code == 401
     assert response.json()["code"] == "authentication_required"
 
 
-def test_protected_message_resolves_verified_internal_identity(
+async def test_protected_message_resolves_verified_internal_identity(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    verifier = _IdentityVerifier()
     resolver = _IdentityResolver()
-    response = asyncio.run(
-        _request(
-            "POST",
+    async with _api_client(
+        settings=_authenticated_settings(),
+        identity_verifier=verifier,
+        identity_resolver=resolver,
+    ) as client:
+        response = await client.post(
             "/v1/messages",
             json={"message": "Hello"},
             headers={
@@ -217,13 +203,10 @@ def test_protected_message_resolves_verified_internal_identity(
                 "X-Amzn-Oidc-Data": "signed-edge-assertion",
                 "X-Amzn-Oidc-AccessToken": "signed-access-token",
             },
-            settings=_authenticated_settings(),
-            identity_verifier=_IdentityVerifier(),
-            identity_resolver=resolver,
         )
-    )
 
     assert response.status_code == 200
+    assert verifier.credentials == ("signed-edge-assertion", "signed-access-token")
     assert resolver.principal is not None
     assert resolver.principal.external_subject == "stable-subject"
     records = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
@@ -232,27 +215,28 @@ def test_protected_message_resolves_verified_internal_identity(
         assert record["correlation_id"] == "authenticated-correlation"
 
 
-def test_invalid_or_unauthorized_credentials_fail_safely() -> None:
+async def test_invalid_or_unauthorized_credentials_fail_safely() -> None:
     for failure, expected_status in (
         (AuthenticationError("forged"), 401),
         (AuthorizationError("not a reviewer"), 403),
     ):
-        response = asyncio.run(
-            _request(
-                "POST",
+        verifier = _IdentityVerifier(failure)
+        async with _api_client(
+            settings=_authenticated_settings(),
+            identity_verifier=verifier,
+            identity_resolver=_IdentityResolver(),
+        ) as client:
+            response = await client.post(
                 "/v1/messages",
                 json={"message": "Hello"},
                 headers={
                     "X-Amzn-Oidc-Data": "signed-edge-assertion",
                     "X-Amzn-Oidc-AccessToken": "signed-access-token",
                 },
-                settings=_authenticated_settings(),
-                identity_verifier=_IdentityVerifier(failure),
-                identity_resolver=_IdentityResolver(),
             )
-        )
 
         assert response.status_code == expected_status
+        assert verifier.credentials == ("signed-edge-assertion", "signed-access-token")
         assert "forged" not in response.text
         assert "not a reviewer" not in response.text
 
@@ -263,10 +247,15 @@ class _FailingIdentityResolver:
         raise RuntimeError("database password must stay private")
 
 
-def test_unexpected_failure_returns_bounded_correlated_error() -> None:
-    response = asyncio.run(
-        _request(
-            "POST",
+async def test_unexpected_failure_returns_bounded_correlated_error() -> None:
+    verifier = _IdentityVerifier()
+    async with _api_client(
+        settings=_authenticated_settings(),
+        identity_verifier=verifier,
+        identity_resolver=_FailingIdentityResolver(),
+        raise_app_exceptions=False,
+    ) as client:
+        response = await client.post(
             "/v1/messages",
             json={"message": "Hello"},
             headers={
@@ -274,14 +263,10 @@ def test_unexpected_failure_returns_bounded_correlated_error() -> None:
                 "X-Amzn-Oidc-Data": "signed-edge-assertion",
                 "X-Amzn-Oidc-AccessToken": "signed-access-token",
             },
-            settings=_authenticated_settings(),
-            identity_verifier=_IdentityVerifier(),
-            identity_resolver=_FailingIdentityResolver(),
-            raise_app_exceptions=False,
         )
-    )
 
     assert response.status_code == 500
+    assert verifier.credentials == ("signed-edge-assertion", "signed-access-token")
     assert response.json() == {
         "code": "internal_error",
         "message": "The request could not be completed.",
@@ -290,16 +275,13 @@ def test_unexpected_failure_returns_bounded_correlated_error() -> None:
     assert "database password" not in response.text
 
 
-def test_logout_expires_alb_cookie_shards_and_uses_cognito() -> None:
-    response = asyncio.run(
-        _request(
-            "GET",
-            "/auth/logout",
-            settings=_authenticated_settings(),
-            identity_verifier=_IdentityVerifier(),
-            identity_resolver=_IdentityResolver(),
-        )
-    )
+async def test_logout_expires_alb_cookie_shards_and_uses_cognito() -> None:
+    async with _api_client(
+        settings=_authenticated_settings(),
+        identity_verifier=_IdentityVerifier(),
+        identity_resolver=_IdentityResolver(),
+    ) as client:
+        response = await client.get("/auth/logout")
 
     assert response.status_code == 303
     assert response.headers["location"].startswith(

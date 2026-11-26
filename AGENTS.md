@@ -36,6 +36,8 @@
 - Use single blank lines to separate logical phases within a callable.
   If a callable needs several phases or section-label comments, prefer extracting
   well-named helpers.
+- Prefer module-level functions in production code and tests. Nest a function
+  only when a required closure or another design constraint calls for it.
 - Give every Pydantic model field a useful `Field(description=...)`. For fields
   persisted outside process memory, also document storage meaning, nullability
   or default behavior, lifecycle, and units or format wherever those facts are
@@ -55,6 +57,13 @@
 - Name domain behavior by its role, such as `*Policy`, `*Strategy`, or
   `*Validator`. Use `*Service` only for domain behavior that belongs to no
   entity or value object.
+
+## Test conventions
+
+- Use private module-level functions (prefixed with `_`) to create test values,
+  fakes, and simulated behavior.
+- Limit test helpers to Arrange logic. Exercise the code under test and make
+  all assertions in the `test_*` function.
 
 ## Persistence conventions
 
