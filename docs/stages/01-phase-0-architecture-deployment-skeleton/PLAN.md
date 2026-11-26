@@ -367,6 +367,67 @@ The live UI completes Google-federated Cognito sign-in and sign-out, FastAPI
 authorizes from verified identity, and tests demonstrate that client-controlled
 identity claims are not trusted.
 
+## Architecture refinement before Slice 8 live verification
+
+**Status:** Planned
+
+Complete these three changes in order before Slice 8 live verification. Each
+change should leave the app runnable. Keep the HTTP contract, authentication
+behavior, database schema, and deployment topology intact. Define retrieval
+interfaces when the first use case needs them in Phase 1.
+
+Run `./scripts/quality.sh` and `git diff --check` for each change, in addition
+to the checks below.
+
+### 1. Separate API code from startup wiring
+
+Add a `composition` package that constructs concrete dependencies and owns
+their startup and shutdown lifecycle. Keep routes, middleware, and HTTP error
+handling in `api`. Point Uvicorn directly at the composed app, remove the
+startup re-export from `api/__init__.py`, and preserve the existing test
+injection points.
+
+Run the API tests and `uv run python scripts/container_smoke.py`. Check in a
+fresh Python process that importing `portfolio_rag.api` neither builds the app
+nor loads the database adapters. Update any documented startup commands that
+use the old entry point.
+
+### 2. Move identity service construction into composition
+
+Have composition inject `DbIdentityRepository` into `ResolveIdentityService`
+and remove `DbIdentityResolver`. Let the repository open the session and
+commit the single atomic upsert.
+
+Run the identity service tests and API authentication tests. Run the database
+integration test with `PORTFOLIO_RAG_TEST_DATABASE_URL` pointing to an isolated,
+migrated PostgreSQL database. Verify that resolving the same subject preserves
+its internal ID and persists the updated email.
+
+### 3. Document and enforce dependency rules
+
+Update [the design](../../../DESIGN.md) and
+[ADR-0002](../../adr/0002-framework-neutral-domain-boundary.md) to reflect the
+implemented rules. Use the following rules as acceptance criteria for the
+source-based architecture tests.
+
+- `domain` imports only itself, the standard library, and Pydantic.
+- `application` imports only itself, `domain`, the standard library, and
+  Pydantic.
+- `infrastructure` can import itself, `domain`, and application contracts,
+  values, and errors. Its adapters can use the frameworks and SDKs they need.
+- `api` can import itself, application use cases and contracts, domain types
+  needed at the HTTP boundary, and HTTP boundary dependencies.
+- `ui` can import itself and its UI and HTTP client dependencies. It reaches
+  the backend over HTTP at runtime.
+- `composition` can import the packages it wires. No other package imports it.
+- Allow the shared structured-logging helper where the runtime needs it. Keep
+  the allowance specific to the helper.
+
+Add pytest checks that parse imports from source, including package re-exports,
+without importing or starting the app. Verify that the checks reject a
+forbidden import and a forbidden re-export. Record the results for all three
+changes in `IMPLEMENTATION.md` as the work is completed.
+
 ## Slice 8 — Operational readiness
 
 **Status:** Local implementation prepared; live verification pending
@@ -394,6 +455,8 @@ or production claims beyond the documented availability limits.
 
 ### Verification
 
+- Complete the [architecture refinement](#architecture-refinement-before-slice-8-live-verification)
+  before starting live verification.
 - Trace one request across UI, API, database, and identity boundaries without
   exposing secrets or raw user content.
 - Exercise safe task failure, database unavailability, bad configuration, and
@@ -417,7 +480,7 @@ first deterministic RAG slice with all Phase 0 risks recorded.
 
 ## Stage completion criteria
 
-Phase 0 is complete when all eight slices meet their completion conditions, the
-implementation record reflects actual results and deviations, the quality and
-delivery paths are green, and no unresolved issue blocks deterministic baseline
-RAG work.
+Phase 0 is complete when all eight slices meet their completion conditions,
+the architecture refinement has passed its checks, the implementation record
+reflects actual results and deviations, the quality and delivery paths are
+green, and no unresolved issue blocks deterministic baseline RAG work.
