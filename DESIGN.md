@@ -8,9 +8,6 @@ dependency direction, or system boundaries change. Record the reason for a
 consequential choice in an [ADR](docs/adr/README.md) rather than duplicating its
 history here.
 
-The repository currently contains only the Python and quality foundation. The
-structure below is the agreed direction for the application as it is built.
-
 ## Application structure
 
 ```text
@@ -23,21 +20,22 @@ browser
        <- persistence, retrieval, and external-provider adapters
 ```
 
-The corresponding package structure is:
+The current package structure is shown below.
 
 ```text
 src/portfolio_rag/
+├── composition/
 ├── domain/
 ├── application/
 │   └── services/
 ├── api/
 ├── ui/
-└── infrastructure/
-    ├── db/
-    │   ├── models/
-    │   └── repositories/
-    ├── retrieval/
-    └── providers/
+├── infrastructure/
+│   ├── auth/
+│   └── db/
+│       ├── models/
+│       └── repositories/
+└── observability.py
 ```
 
 Create these packages when their first real component is implemented; do not
@@ -61,9 +59,28 @@ add empty structure in anticipation of later stages.
   and external services and translate framework or provider types at the
   boundary.
 
-Dependencies point inward: adapters may depend on application and domain code;
-application code may depend on the domain; the domain does not depend on UI,
-web, persistence, cloud, or AI orchestration frameworks. See
+### Source dependencies
+
+Each package can import its own modules and the Python standard library.
+
+| Package | Other allowed dependencies |
+| --- | --- |
+| `domain` | Pydantic |
+| `application` | `domain` and Pydantic |
+| `infrastructure` | `domain`, application contracts, values and errors, and the frameworks and SDKs its adapters use |
+| `api` | Application use cases and contracts, domain types used at the HTTP boundary, and HTTP boundary dependencies |
+| `ui` | UI and HTTP client dependencies. Backend access goes through HTTP at runtime. |
+| `composition` | Packages and runtime dependencies it wires together |
+
+`composition` constructs concrete API dependencies and manages their startup
+and shutdown. The ASGI entry point lives there. Imports of `composition` are
+reserved for entry points, such as Uvicorn and Alembic, and code within
+`composition` itself.
+
+Runtime adapters and composition may use the shared structured-logging helper
+through `portfolio_rag.observability` or its named root exports. Pytest checks
+the source imports of every package, including re-exports in `__init__.py`,
+without importing the application under test. See
 [ADR-0001](docs/adr/0001-modular-application-shape.md) and
 [ADR-0002](docs/adr/0002-framework-neutral-domain-boundary.md).
 

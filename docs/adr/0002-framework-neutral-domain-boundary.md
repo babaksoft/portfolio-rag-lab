@@ -12,10 +12,18 @@ will force unrelated business logic and tests to change.
 
 ## Decision
 
-Express domain concepts and required interfaces in application-owned Python
-types. Domain code must not import UI, HTTP, persistence, cloud, model-provider,
-or orchestration frameworks. Adapters translate external types at their owning
-boundary and depend inward on the interfaces they implement.
+Express domain concepts and repository protocols in Python types owned by the
+domain. Domain dependencies are limited to the standard library, Pydantic, and
+the domain itself. Application code can also depend on the domain and owns the
+use cases and application-specific contracts.
+
+Outbound adapters translate external types at their owning boundary and can
+import application contracts, values, and errors. The HTTP API calls
+application use cases and uses domain types needed at the HTTP boundary. The UI
+accesses the backend over HTTP. Composition wires concrete dependencies and
+owns the API lifecycle. Runtime adapters and composition may share the
+structured-logging helper. The full rules are in
+[Design](../../DESIGN.md#source-dependencies).
 
 Introduce interfaces only for capabilities required by a concrete use case.
 Do not create speculative abstractions solely to make every dependency
@@ -25,6 +33,8 @@ replaceable.
 
 - Domain behavior can be tested without infrastructure or provider SDKs.
 - Framework and provider changes remain localized to adapters and composition.
+- Pytest enforces import direction and checks package re-exports by parsing
+  source without starting the application.
 - Boundary mapping is explicit and adds modest implementation overhead.
 - Developers must resist passing convenient framework objects through use-case
   and domain APIs.

@@ -369,7 +369,7 @@ identity claims are not trusted.
 
 ## Architecture refinement before Slice 8 live verification
 
-**Status:** Planned
+**Status:** Implemented and verified locally
 
 Complete these three changes in order before Slice 8 live verification. Each
 change should leave the app runnable. Keep the HTTP contract, authentication
