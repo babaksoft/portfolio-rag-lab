@@ -1,11 +1,17 @@
 import asyncio
 import os
+from uuid import uuid4
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import select, text
 
+from portfolio_rag.application.services import ResolveIdentityService
 from portfolio_rag.domain import AuthenticatedPrincipal
-from portfolio_rag.infrastructure.db import Database, DbIdentityResolver
+from portfolio_rag.infrastructure.db import (
+    Database,
+    DbIdentityRepository,
+    IdentityModel,
+)
 
 TEST_DATABASE_URL_VARIABLE = "PORTFOLIO_RAG_TEST_DATABASE_URL"
 
@@ -26,21 +32,33 @@ def test_migrated_database_is_ready_and_has_pgvector() -> None:
                 )
             assert extension == "vector"
 
-            resolver = DbIdentityResolver(database.sessions)
+            resolver = ResolveIdentityService(DbIdentityRepository(database.sessions))
+            subject = f"integration-{uuid4()}"
             first = await resolver.execute(
                 AuthenticatedPrincipal(
-                    external_subject="integration-subject",
+                    external_subject=subject,
                     email="first@example.com",
                 )
             )
             second = await resolver.execute(
                 AuthenticatedPrincipal(
-                    external_subject="integration-subject",
+                    external_subject=subject,
                     email="updated@example.com",
                 )
             )
             assert second.id == first.id
             assert second.email == "updated@example.com"
+
+            async with database.sessions() as session:
+                stored_identity = (
+                    await session.execute(
+                        select(IdentityModel).where(
+                            IdentityModel.external_subject == subject
+                        )
+                    )
+                ).scalar_one()
+                assert stored_identity.id == first.id
+                assert stored_identity.email == "updated@example.com"
         finally:
             await database.dispose()
 

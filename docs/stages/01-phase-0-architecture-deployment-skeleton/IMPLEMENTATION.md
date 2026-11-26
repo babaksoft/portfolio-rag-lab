@@ -362,6 +362,18 @@ durable design documents rather than repeating them here.
   project. PostgreSQL migrations ran, the UI reached the API over HTTP, and
   shutdown completed in 1.8 seconds.
 
+### 2026-11-26 — Architecture refinement step 2
+
+- Composition injects `DbIdentityRepository` into `ResolveIdentityService`.
+  The repository opens a session and commits one atomic PostgreSQL upsert per
+  resolution. Removed `DbIdentityResolver`.
+- The identity service, API authentication, and PostgreSQL integration checks
+  passed. The integration test ran against an isolated database migrated to
+  Alembic head. Resolving the same subject preserved its internal ID, and a
+  fresh session confirmed the updated email was persisted.
+- `./scripts/quality.sh` passed all 32 tests with the PostgreSQL integration
+  test enabled. `git diff --check` passed.
+
 ## Deviations
 
 None.
