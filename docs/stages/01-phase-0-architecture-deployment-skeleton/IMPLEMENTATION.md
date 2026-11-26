@@ -374,6 +374,20 @@ durable design documents rather than repeating them here.
 - `./scripts/quality.sh` passed all 32 tests with the PostgreSQL integration
   test enabled. `git diff --check` passed.
 
+### Architecture refinement step 3
+
+- Updated `DESIGN.md` and ADR-0002 with the package dependency rules, API
+  composition ownership, the UI's HTTP boundary, and the shared
+  structured-logging allowance.
+- Added pytest checks that parse imports and package re-exports from source.
+  Regression cases confirmed that the checks reject forbidden imports and
+  re-exports. All 13 architecture checks passed in a fresh process without
+  loading `portfolio_rag`.
+- `./scripts/quality.sh` passed with 44 tests and the opt-in PostgreSQL
+  integration test skipped because its isolated URL was unset. The suite ran
+  outside the sandbox after an async API test stalled inside it.
+  `git diff --check` passed.
+
 ## Deviations
 
 None.
