@@ -33,7 +33,7 @@ uv run alembic upgrade head
 Start the API in one terminal:
 
 ```sh
-uv run uvicorn portfolio_rag.api:app --host 127.0.0.1 --port 8000
+uv run uvicorn portfolio_rag.composition.asgi:app --host 127.0.0.1 --port 8000
 ```
 
 Start the UI in another terminal:

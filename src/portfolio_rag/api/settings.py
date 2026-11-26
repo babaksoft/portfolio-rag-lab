@@ -4,7 +4,6 @@ from typing import Literal, Self
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from sqlalchemy.engine import URL
 
 
 class ApiSettings(BaseSettings):
@@ -175,17 +174,3 @@ class ApiSettings(BaseSettings):
                 "for alb_cognito authentication"
             )
         return self
-
-    def resolved_database_url(self) -> str:
-        """Return the configured or safely assembled SQLAlchemy database URL."""
-        if self.database_url is not None:
-            return self.database_url.get_secret_value()
-
-        return URL.create(
-            drivername="postgresql+asyncpg",
-            username=self.database_username,
-            password=self.database_password.get_secret_value(),
-            host=self.database_host,
-            port=self.database_port,
-            database=self.database_name,
-        ).render_as_string(hide_password=False)

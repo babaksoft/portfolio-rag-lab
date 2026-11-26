@@ -35,5 +35,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=5s --timeout=2s --start-period=5s --retries=5 \
     CMD ["python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health/ready', timeout=1).read()"]
 
-CMD ["uvicorn", "portfolio_rag.api:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "8"]
+CMD ["uvicorn", "portfolio_rag.composition.asgi:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "8"]
 

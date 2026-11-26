@@ -343,6 +343,25 @@ durable design documents rather than repeating them here.
   current cost evidence, leakage review, and the complete authenticated smoke
   test remain pending an explicitly approved active window.
 
+### 2026-11-26 — Architecture refinement step 1
+
+- Moved API dependency construction and database shutdown into
+  `portfolio_rag.composition`. The HTTP adapter registers routes, middleware,
+  and error handlers with the supplied dependencies. The app factory still
+  accepts settings, readiness, credential verification, and identity
+  resolution overrides.
+- Updated the README and API image to launch
+  `portfolio_rag.composition.asgi:app`. The runtime and Alembic share database
+  URL resolution in composition.
+- All 14 API tests passed. `./scripts/quality.sh` passed with 31 tests and the
+  opt-in database integration test skipped because its isolated URL was
+  unset. A fresh Python process confirmed that importing `portfolio_rag.api`
+  neither constructs the app nor loads the database adapters. Alembic
+  generated offline migration SQL, and `git diff --check` passed.
+- `uv run python scripts/container_smoke.py` passed with an isolated Compose
+  project. PostgreSQL migrations ran, the UI reached the API over HTTP, and
+  shutdown completed in 1.8 seconds.
+
 ## Deviations
 
 None.
