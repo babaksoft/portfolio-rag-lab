@@ -8,10 +8,13 @@ from fastapi import FastAPI
 from portfolio_rag import configure_structured_logging
 from portfolio_rag.api import ApiSettings, ReadinessProbe, build_app
 from portfolio_rag.application import IdentityResolver, IdentityVerifier
-from portfolio_rag.application.services import AnswerMessageService
+from portfolio_rag.application.services import (
+    AnswerMessageService,
+    ResolveIdentityService,
+)
 from portfolio_rag.composition.database_url import resolve_database_url
 from portfolio_rag.infrastructure.auth import AlbCognitoIdentityVerifier
-from portfolio_rag.infrastructure.db import Database, DbIdentityResolver
+from portfolio_rag.infrastructure.db import Database, DbIdentityRepository
 
 
 def create_app(
@@ -72,7 +75,9 @@ def create_app(
                     "identity_resolver is required when a readiness probe replaces "
                     "the production database"
                 )
-            identity_resolver = DbIdentityResolver(database.sessions)
+            identity_resolver = ResolveIdentityService(
+                DbIdentityRepository(database.sessions)
+            )
 
     @asynccontextmanager
     async def lifespan(_application: FastAPI) -> AsyncGenerator[None, None]:
