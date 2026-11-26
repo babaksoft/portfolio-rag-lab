@@ -5,14 +5,14 @@ from uuid import UUID
 import httpx
 import pytest
 
-from portfolio_rag.api import create_app
-from portfolio_rag.api.settings import ApiSettings
+from portfolio_rag.api import ApiSettings
 from portfolio_rag.application import (
     AuthenticationError,
     AuthorizationError,
     IdentityResolver,
     IdentityVerifier,
 )
+from portfolio_rag.composition import create_app
 from portfolio_rag.domain import AuthenticatedPrincipal, Identity
 
 

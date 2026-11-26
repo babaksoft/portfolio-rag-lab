@@ -1,7 +1,8 @@
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from portfolio_rag.api.settings import ApiSettings
+from portfolio_rag.api import ApiSettings
+from portfolio_rag.composition import resolve_database_url
 
 
 def test_database_url_override_takes_precedence() -> None:
@@ -11,7 +12,7 @@ def test_database_url_override_takes_precedence() -> None:
     )
 
     assert (
-        settings.resolved_database_url()
+        resolve_database_url(settings)
         == "postgresql+asyncpg://override:secret@db/example"
     )
 
@@ -25,7 +26,7 @@ def test_database_components_are_safely_encoded() -> None:
         database_password=SecretStr("p@ss/word"),
     )
 
-    assert settings.resolved_database_url() == (
+    assert resolve_database_url(settings) == (
         "postgresql+asyncpg://portfolio_admin:p%40ss%2Fword@"
         "database.internal:5433/portfolio_rag"
     )
