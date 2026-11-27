@@ -3,8 +3,8 @@
 An evaluated progression from deterministic retrieval to bounded agentic
 retrieval, with measured quality, latency, cost, and reliability tradeoffs.
 
-The first Phase 0 slices provide a local Streamlit-to-FastAPI walking skeleton
-backed by PostgreSQL/pgvector. It runs either as native development processes
+Phase 0 provides a Streamlit-to-FastAPI walking skeleton backed by
+PostgreSQL/pgvector. It runs either as native development processes
 or as separate containers. See [`VISION.md`](VISION.md) for the project charter
 and [`PLAN.md`](PLAN.md) for the staged delivery plan. The current architecture
 is described in [`DESIGN.md`](DESIGN.md), with consequential decisions indexed
@@ -68,8 +68,8 @@ docker compose up --build --wait
 ```
 
 Open <http://127.0.0.1:8501>. The UI container reaches the API at its Compose
-service address, matching the task-local configuration boundary planned for
-ECS. The API is also exposed locally at <http://127.0.0.1:8000> for health and
+service address. On ECS, the two containers communicate over the task-local
+network. The API is also exposed locally at <http://127.0.0.1:8000> for health and
 boundary checks. PostgreSQL is exposed at `127.0.0.1:5432` for native tools.
 All published ports bind only to the loopback interface. If a default port is
 occupied, set `PORTFOLIO_RAG_DATABASE_PORT`, `PORTFOLIO_RAG_API_PORT`, or
@@ -86,8 +86,9 @@ uv run alembic downgrade -1
 ```
 
 Review generated revisions before applying them. Application startup never
-changes schema. To run the PostgreSQL integration tests against the local
-Compose database after migration:
+changes schema. Run the PostgreSQL integration test against a disposable,
+migrated local database because it writes an identity record. The example
+uses the Compose defaults.
 
 ```sh
 PORTFOLIO_RAG_TEST_DATABASE_URL=postgresql+asyncpg://portfolio_rag:portfolio_rag@127.0.0.1:5432/portfolio_rag \
@@ -109,7 +110,7 @@ uv run python scripts/container_smoke.py
 ```
 
 Pull requests run the same checks in GitHub Actions. Repository automation,
-dependency maintenance, and the planned AWS OIDC trust boundary are documented
+dependency maintenance, and the AWS OIDC trust boundary are documented
 in [`docs/github-operations.md`](docs/github-operations.md).
 
 ## AWS deployment

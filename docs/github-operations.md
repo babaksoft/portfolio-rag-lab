@@ -26,8 +26,8 @@ checks` so a pull request cannot merge when either locked application checks or
 either production image fails to build.
 
 Repository-level Actions permissions default to read-only, and workflows may
-not use `GITHUB_TOKEN` to approve pull requests. A future workflow must declare
-any narrower write permission at the job that needs it.
+not use `GITHUB_TOKEN` to approve pull requests. Workflows declare any required
+write permission at the job that needs it.
 
 The repository settings keep the dependency graph, Dependabot alerts, and
 Dependabot security updates enabled. These settings complement the committed
@@ -83,12 +83,13 @@ accepts exactly two ECS task-definition replacements and one ECS service
 update; any network, IAM, database, DNS, or other infrastructure change fails
 closed and must follow the separately reviewed manual Terraform path.
 
-Before the first dispatch, apply the reviewed bootstrap plan with the
-administrative bootstrap identity, then create a `production` GitHub
-Environment with a required reviewer and no branch other than `master`.
-Update the default-branch ruleset to require `Build runtime images`. These live
-changes must be performed and recorded separately because merging workflow
-files does not mutate AWS or repository settings.
+The [Phase 0 implementation record](stages/01-phase-0-architecture-deployment-skeleton/IMPLEMENTATION.md)
+records the verified live delivery cycle. When setting up delivery access,
+apply the reviewed bootstrap plan with the administrative bootstrap identity
+and configure the `production` GitHub Environment with a required reviewer and
+`master` as the only allowed branch. Require `Build runtime images` in the
+default-branch ruleset during setup. These AWS and repository settings are
+managed separately from the workflow files.
 
 The deployment runs the new API image's backward-compatible Alembic migrations
 before applying the plan. ECS circuit-breaker rollback handles an unhealthy
