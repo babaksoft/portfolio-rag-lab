@@ -106,6 +106,7 @@ without importing the application under test. See
   types.
 - Local and deployed backend addresses differ by configuration; UI behavior
   must not depend on the network topology.
+- The UI client uses HTTPX.
 
 ### FastAPI API
 
@@ -172,6 +173,8 @@ for the backend. They are deployed and scaled as one unit and communicate over
 the task-local network through the explicit API client. An Application Load
 Balancer is the public entry point; PostgreSQL remains an external managed
 dependency.
+The production hostname and DNS setup are recorded in the
+[AWS deployment runbook](terraform/README.md).
 
 This shape deliberately favors cost and learning speed over availability. A
 container or task failure can interrupt the whole application; deployments may
@@ -185,9 +188,9 @@ but they do not make a single task highly available. See
 
 ### Configuration and secrets
 
-- Each process loads typed settings at its composition boundary and fails fast
-  at startup when required configuration is missing or invalid. Domain and
-  application modules do not read environment variables.
+- The API and UI use Pydantic Settings at their runtime boundaries. Each process
+  fails fast at startup when required configuration is missing or invalid.
+  Domain and application modules do not read environment variables.
 - Environment variables are the runtime configuration interface. Safe names
   and placeholders belong in `.env.example`; local `.env` files remain ignored.
 - Secret values come from AWS Secrets Manager in production and are injected at
@@ -208,11 +211,13 @@ but they do not make a single task highly available. See
 
 ### Health
 
-- Each container exposes distinct liveness and readiness signals suitable for
-  ECS and load-balancer checks. Liveness reports process health without calling
-  dependencies.
-- Readiness is fast and bounded and checks only dependencies required to serve
-  traffic. It does not make paid model calls or depend on optional providers.
+- The API exposes `/health/live` for process liveness and `/health/ready` for
+  bounded database readiness. Streamlit exposes its process check at
+  `/_stcore/health`.
+- ECS checks API readiness and Streamlit process health. The load balancer
+  checks Streamlit process health and API liveness on the logout target group.
+- Readiness checks only dependencies required to serve traffic and makes no
+  paid model calls.
 - Health responses contain no secrets, user data, or detailed infrastructure
   errors. Dependency diagnostics belong in logs.
 
@@ -232,16 +237,15 @@ but they do not make a single task highly available. See
 
 ## Deferred decisions
 
-The following choices do not block the first implementation slice:
+The remaining choices have decision points in later slices or phases.
 
 | Decision | Resolve when |
 | --- | --- |
-| Settings and HTTP-client libraries | The Phase 0 slice first requiring each capability |
-| Database schema, vector dimensions, and index type | The database and baseline-retrieval slices |
+| Retrieval schema, vector dimensions, and index type | The baseline indexing and retrieval slices |
 | Exact API payloads, error codes, and versioning mechanism | The use case introducing each endpoint |
-| Model and embedding providers | The deterministic baseline stage |
+| Development model and embedding configuration | The deterministic baseline stage, informed by [proposed ADR-0005](docs/adr/0005-use-llamaindex-for-baseline-rag.md) |
+| Production model and embedding providers | When baseline quality, latency, and cost evidence supports the selection |
 | Agent orchestration framework | The bounded-agentic retrieval spike |
-| Public domain and DNS name | Before public deployment requires them |
 | Separate ECS services, additional tasks, or Multi-AZ spending | When measured reliability or scaling needs justify them |
 
 ## Evolution rules

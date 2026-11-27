@@ -16,10 +16,10 @@ separately from conceptual complexity.
 
 ## Phase 0 — Architecture and deployment skeleton
 
-Deploy a minimal live system containing a public Streamlit UI, FastAPI backend,
-PostgreSQL with pgvector, health endpoints, authentication foundation, CI/CD,
-Terraform-managed AWS infrastructure, secrets handling, and operational logs.
-The chat response may initially be a placeholder.
+Deploy a minimal live system with an authenticated Streamlit UI, a FastAPI
+backend, PostgreSQL with pgvector, health endpoints, CI/CD, Terraform-managed AWS
+infrastructure, secrets handling, and operational logs. The chat response may
+initially be a placeholder.
 
 **Goal:** establish a production-shaped walking skeleton before AI complexity.
 
@@ -28,6 +28,13 @@ The chat response may initially be a placeholder.
 Define the portfolio corpus and ingestion contract, build deterministic
 indexing and vector retrieval, generate evidence-backed answers, display
 citations, and deploy the first useful public assistant.
+
+The [draft stage plan](docs/stages/02-phase-1-deterministic-baseline-rag/PLAN.md)
+uses the proposed [baseline stack](docs/adr/0005-use-llamaindex-for-baseline-rag.md)
+and [telemetry approach](docs/adr/0006-instrument-rag-and-monitor-application-health.md).
+Start curating evaluation cases and instrument retrieval and generation as they
+land. Target live tracing and a minimum monitoring dashboard before public RAG
+availability.
 
 **Goal:** establish a simple, reproducible baseline suitable for comparison.
 
@@ -39,8 +46,8 @@ comparable.
 
 **Goal:** make later architectural choices empirical.
 
-The evaluation dataset should begin during Phase 1 rather than being postponed
-until all baseline implementation work is complete.
+Build on the dataset started in Phase 1 with the proposed
+[evaluation runner and offline scorer](docs/adr/0007-own-rag-evaluation-and-score-with-ragas.md).
 
 ## Phase 3 — Enhanced deterministic RAG
 
@@ -75,7 +82,6 @@ engineering conclusions.
 
 ## Deferred decisions
 
-- public domain and subdomain;
 - production model and embedding providers;
 - orchestration framework for bounded agentic retrieval;
 - conditions that justify splitting Streamlit and FastAPI into separate ECS
