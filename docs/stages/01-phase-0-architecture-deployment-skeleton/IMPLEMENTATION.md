@@ -388,6 +388,30 @@ durable design documents rather than repeating them here.
   outside the sandbox after an async API test stalled inside it.
   `git diff --check` passed.
 
+### 2026-11-27 — Phase 0 live browser verification
+
+- Deployed master revision `117e569fe629815808186a88882829b2119c056a` in
+  `us-east-1`. The database migration succeeded, ECS ran both expected image
+  digests in one healthy task, and both load balancer targets were healthy.
+- Chrome rejected a stale session on message submission. Sign-out opened
+  `/signed-out` in the same tab, and two fresh sign-ins each produced the
+  documented placeholder response without a 401 or 403.
+- Firefox completed a fresh Google sign-in with MFA, returned the documented
+  placeholder response, then repeated the sign-out, sign-in, and message flow
+  successfully. The live browser verification passed in both browsers.
+- The live apply used the administrative profile for DNS and observability.
+  The temporary Terraform configuration preserved the shared Route 53 zone
+  and replaced the rejected SNS wildcard with explicit topic actions. The
+  monitoring email subscription was pending confirmation.
+- Rolled back to `dfa93e0128102bf181ac48a53df8ecd34867d954` and verified
+  both stable image digests, both load balancer targets, and the signed-out
+  endpoint. The Alembic revisions were the same across both deployments.
+- Teardown removed the production runtime and application DNS records.
+  Confirmed the final encrypted RDS snapshot
+  `portfolio-rag-production-final-20261127155955` is available. Production
+  state retains the two ECR repositories with both revisions. The shared
+  Route 53 zone and bootstrap resources were preserved.
+
 ## Deviations
 
 None.
