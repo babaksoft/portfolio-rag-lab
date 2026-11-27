@@ -1,6 +1,6 @@
 # ADR-0006: Instrument RAG and monitor application health
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-27
 
 ## Context

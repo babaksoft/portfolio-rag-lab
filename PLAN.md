@@ -29,8 +29,8 @@ Define the portfolio corpus and ingestion contract, build deterministic
 indexing and vector retrieval, generate evidence-backed answers, display
 citations, and deploy the first useful public assistant.
 
-The [draft stage plan](docs/stages/02-phase-1-deterministic-baseline-rag/PLAN.md)
-uses the proposed [baseline stack](docs/adr/0005-use-llamaindex-for-baseline-rag.md)
+The [stage plan](docs/stages/02-phase-1-deterministic-baseline-rag/PLAN.md)
+uses the accepted [baseline stack](docs/adr/0005-use-llamaindex-for-baseline-rag.md)
 and [telemetry approach](docs/adr/0006-instrument-rag-and-monitor-application-health.md).
 Start curating evaluation cases and instrument retrieval and generation as they
 land. Target live tracing and a minimum monitoring dashboard before public RAG
@@ -46,7 +46,7 @@ comparable.
 
 **Goal:** make later architectural choices empirical.
 
-Build on the dataset started in Phase 1 with the proposed
+Build on the dataset started in Phase 1 with the accepted
 [evaluation runner and offline scorer](docs/adr/0007-own-rag-evaluation-and-score-with-ragas.md).
 
 ## Phase 3 — Enhanced deterministic RAG

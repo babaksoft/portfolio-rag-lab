@@ -390,6 +390,7 @@ durable design documents rather than repeating them here.
 
 ### 2026-11-27 — Phase 0 live browser verification
 
+- The repository owner confirmed completion of Slice 8 live verification.
 - Deployed master revision `117e569fe629815808186a88882829b2119c056a` in
   `us-east-1`. The database migration succeeded, ECS ran both expected image
   digests in one healthy task, and both load balancer targets were healthy.

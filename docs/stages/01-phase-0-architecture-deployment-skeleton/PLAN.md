@@ -430,7 +430,8 @@ changes in `IMPLEMENTATION.md` as the work is completed.
 
 ## Slice 8 — Operational readiness
 
-**Status:** Local implementation prepared; live verification pending
+**Status:** Complete. Live verification completed on 2026-11-27. See the
+[implementation record](IMPLEMENTATION.md#2026-11-27--phase-0-live-browser-verification).
 
 ### Outcome
 

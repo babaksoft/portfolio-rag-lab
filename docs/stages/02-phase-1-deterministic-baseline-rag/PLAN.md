@@ -1,6 +1,6 @@
 # Phase 1 — Deterministic Baseline RAG
 
-**Status** — Draft for review before implementation
+**Status** — Accepted
 
 ## Outcome
 
@@ -11,8 +11,8 @@ later approaches can be compared under the same conditions.
 
 ## Entry conditions and scope
 
-Begin implementation after [Phase 0 Slice 8 live verification](../01-phase-0-architecture-deployment-skeleton/PLAN.md#slice-8--operational-readiness)
-and review this draft against the findings. The proposed
+Phase 0 Slice 8 [live verification](../01-phase-0-architecture-deployment-skeleton/PLAN.md#slice-8--operational-readiness)
+is complete. The accepted
 [baseline stack](../../adr/0005-use-llamaindex-for-baseline-rag.md),
 [telemetry approach](../../adr/0006-instrument-rag-and-monitor-application-health.md),
 and [evaluation approach](../../adr/0007-own-rag-evaluation-and-score-with-ragas.md)

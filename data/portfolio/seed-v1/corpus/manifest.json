@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "source_id": "genai-template-committed-snapshots",
+      "origin_url": "https://github.com/babaksoft/genai-template/blob/da75642211959a54e6c26b6df71d459ae0f14f26/docs/decisions/0001-read-committed-repository-snapshots.md",
+      "content_sha256": "3083d52b66861881163b10186018537fcde7c01061e2900e5102c0737578fddd"
+    },
+    {
+      "source_id": "genai-template-flat-corpus",
+      "origin_url": "https://github.com/babaksoft/genai-template/blob/da75642211959a54e6c26b6df71d459ae0f14f26/docs/decisions/0002-use-a-flat-manifest-backed-corpus.md",
+      "content_sha256": "a4ca5a80e3054ac27cd06cdedbfdde43d7a80b75c527bf7d6a1eaefc9ec8092d"
+    }
+  ]
+}
