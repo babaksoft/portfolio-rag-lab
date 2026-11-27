@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "corpus_version": "7333028f724ef899899ee1ea3917a08b1e45e8744f46362f3c9a33290db6fdf7",
+  "cases": [
+    {
+      "case_id": "committed-snapshot-inputs",
+      "question": "How does GenAI Template read a reproducible source snapshot when the working tree has local edits?",
+      "expected_outcome": "answer",
+      "required_facts": [
+        "The local reader resolves a Git ref to an immutable commit.",
+        "It reads tracked blobs from the Git object database without checking out or modifying the repository.",
+        "Working-tree changes are excluded."
+      ],
+      "expected_evidence": [
+        {
+          "source_id": "genai-template-committed-snapshots",
+          "start_line": 13,
+          "end_line": 17
+        }
+      ]
+    },
+    {
+      "case_id": "flat-corpus-provenance",
+      "question": "How does GenAI Template preserve provenance when splitting documents from the flat portfolio corpus?",
+      "expected_outcome": "answer",
+      "required_facts": [
+        "The Markdown documents sit beside an authoritative manifest.json that maps each document to its provenance.",
+        "Manifest metadata is added to the documents before splitting so it reaches every chunk."
+      ],
+      "expected_evidence": [
+        {
+          "source_id": "genai-template-flat-corpus",
+          "start_line": 13,
+          "end_line": 19
+        }
+      ]
+    },
+    {
+      "case_id": "portfolio-release-retention",
+      "question": "How many days does GenAI Template retain old portfolio corpus releases?",
+      "expected_outcome": "abstain"
+    }
+  ]
+}

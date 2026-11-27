@@ -1,6 +1,6 @@
 # ADR-0007: Own RAG evaluation and score with Ragas
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-27
 
 ## Context
