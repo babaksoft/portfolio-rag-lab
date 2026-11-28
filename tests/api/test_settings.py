@@ -18,7 +18,9 @@ def test_database_url_override_takes_precedence() -> None:
 
 
 def test_database_components_are_safely_encoded() -> None:
+    """Encode the component credentials when a complete URL is absent."""
     settings = ApiSettings(
+        database_url=None,
         database_host="database.internal",
         database_port=5433,
         database_name="portfolio_rag",

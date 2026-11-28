@@ -1,0 +1,77 @@
+{
+  "units": [
+    {
+      "source_id": "portfolio-rag-lab-overview",
+      "repository": "portfolio-rag-lab",
+      "commit": "14a1c694aed4a0c7c702203ec316b5e3693d9c42",
+      "origin_url": "https://github.com/babaksoft/portfolio-rag-lab/tree/14a1c694aed4a0c7c702203ec316b5e3693d9c42",
+      "title": "Portfolio Retrieval Lab",
+      "focus": "Explain the portfolio assistant's purpose, the API and UI boundary, and the seed corpus and evaluation validation. Distinguish the implemented placeholder and offline validator from planned live retrieval and answers.",
+      "files": [
+        "README.md",
+        "DESIGN.md",
+        "docs/stages/02-phase-1-deterministic-baseline-rag/IMPLEMENTATION.md",
+        "data/portfolio/README.md",
+        "scripts/validate_corpus.py",
+        "src/portfolio_rag/api/routes/messages.py",
+        "src/portfolio_rag/application/services/answer_message.py",
+        "src/portfolio_rag/infrastructure/corpus/loading.py"
+      ]
+    },
+    {
+      "source_id": "support-desk-overview",
+      "repository": "support-desk",
+      "commit": "89f23f7c01ac8f274092481d6f0357e8fd13d2d2",
+      "origin_url": "https://github.com/babaksoft/support-desk/tree/89f23f7c01ac8f274092481d6f0357e8fd13d2d2",
+      "title": "Support Desk",
+      "focus": "Explain the implemented fictional SaaS product-guidance use case, how the OpenAI Agents SDK lookup tool grounds drafts, evidence gaps, and what use cases are planned.",
+      "files": [
+        "README.md",
+        "src/support_desk/api/routes/questions.py",
+        "src/support_desk/application/answer_service.py",
+        "src/support_desk/infrastructure/agent.py",
+        "src/support_desk/infrastructure/references.py"
+      ]
+    },
+    {
+      "source_id": "chat-buddy-chat",
+      "repository": "chat-buddy",
+      "commit": "b2c9e91ab8563c28b79e9c4b786ed8b2a58bafe6",
+      "origin_url": "https://github.com/babaksoft/chat-buddy/tree/b2c9e91ab8563c28b79e9c4b786ed8b2a58bafe6/src/chat_buddy/chat",
+      "title": "Chat Buddy Chat",
+      "focus": "Explain Chat's context budget, what a rolling summary preserves, how extracted memory is managed and reused, and how Chat is isolated from Characters.",
+      "files": [
+        "README.md",
+        "docs/decisions/013-separate-chat-and-characters-areas.md",
+        "docs/decisions/017-chat-context-budgeting.md",
+        "docs/decisions/018-chat-rolling-summaries.md",
+        "docs/decisions/019-chat-memory-lifecycle.md",
+        "src/chat_buddy/chat/application/context_builder.py",
+        "src/chat_buddy/chat/application/service/rolling_summary_service.py",
+        "src/chat_buddy/chat/application/service/memory_extraction_service.py",
+        "src/chat_buddy/chat/application/service/memory_management_service.py"
+      ]
+    },
+    {
+      "source_id": "chat-buddy-characters",
+      "repository": "chat-buddy",
+      "commit": "b2c9e91ab8563c28b79e9c4b786ed8b2a58bafe6",
+      "origin_url": "https://github.com/babaksoft/chat-buddy/tree/b2c9e91ab8563c28b79e9c4b786ed8b2a58bafe6/src/chat_buddy/characters",
+      "title": "Chat Buddy Characters",
+      "focus": "Explain Ongoing, Storyline, and Timeline and trace evolution after a completed, selected turn across files: strategy proposal, application validation, the persisted event, and replay. Explain what may change and how a user can review evidence. Keep general Chat out of scope.",
+      "files": [
+        "README.md",
+        "docs/decisions/010-relationship-evolution.md",
+        "docs/decisions/013-separate-chat-and-characters-areas.md",
+        "docs/decisions/035-use-replayable-evolution-events.md",
+        "docs/decisions/036-version-evolution-experiments.md",
+        "src/chat_buddy/characters/application/baseline_evolution_strategy.py",
+        "src/chat_buddy/characters/application/evolution.py",
+        "src/chat_buddy/characters/application/evolution_effect_service.py",
+        "src/chat_buddy/characters/application/evolution_projection_service.py",
+        "src/chat_buddy/characters/application/evolution_inspection_service.py",
+        "src/chat_buddy/characters/infrastructure/db/repositories/evolution_repository.py"
+      ]
+    }
+  ]
+}

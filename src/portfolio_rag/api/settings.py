@@ -5,6 +5,8 @@ from typing import Literal, Self
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from portfolio_rag.validation import POSTGRES_IDENTIFIER_PATTERN
+
 
 class ApiSettings(BaseSettings):
     """Environment-backed API process settings.
@@ -84,14 +86,14 @@ class ApiSettings(BaseSettings):
         default="portfolio_rag",
         min_length=1,
         max_length=64,
-        pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$",
+        pattern=POSTGRES_IDENTIFIER_PATTERN,
         description="PostgreSQL database name used when database_url is absent.",
     )
     database_username: str = Field(
         default="portfolio_rag",
         min_length=1,
         max_length=64,
-        pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$",
+        pattern=POSTGRES_IDENTIFIER_PATTERN,
         description="PostgreSQL login role used when database_url is absent.",
     )
     database_password: SecretStr = Field(

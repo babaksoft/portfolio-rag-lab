@@ -23,7 +23,12 @@ dependencies = [
 ]
 
 [dependency-groups]
+corpus = [
+  "llama-index-workflows>=2.23.3,<3",
+  "openai>=2.54,<3",
+]
 dev = [
+  { include-group = "corpus" },
   "mypy>=1.15",
   "pytest>=8.3",
   "ruff>=0.11",
