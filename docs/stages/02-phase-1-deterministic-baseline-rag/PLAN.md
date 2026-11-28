@@ -1,6 +1,6 @@
 # Phase 1 — Deterministic Baseline RAG
 
-**Status** — Accepted
+**Status** — In progress
 
 ## Outcome
 
@@ -28,6 +28,8 @@ with authorized reviewers.
 
 ## Slice 1 — Define the corpus and initial evaluation cases
 
+**Status:** — Complete (2026-11-27)
+
 **Outcome** — Establish which source material the assistant can use as evidence
 and what a correct answer should cover.
 
@@ -45,19 +47,66 @@ beside the artifacts.
 
 ## Slice 2 — Generate a corpus artifact offline
 
-**Outcome** — Produce a reviewable corpus from a known source snapshot.
+**Outcome** — Publish a reviewed corpus covering three showcase projects from
+pinned source snapshots.
 
-**Scope and artifacts** — Adapt the relevant donor workflow steps for an offline
-command. Record source versions, generation configuration, and output identity.
-Validate the generated artifact and review factual fidelity before promoting it
-for ingestion. Use the seed artifact and a fake model in routine tests.
+**Scope and artifacts** — Keep the existing flat corpus and manifest formats.
+Use four explicit summary units with stable project-prefixed source IDs. The
+following revisions are starting candidates for the source review.
 
-**Verification and completion** — Generate and validate a small artifact using
-the command. Check that rejected output leaves the previous valid artifact
-available. Review a bounded run with the configured development model.
+| Source ID | Candidate revision | Initial coverage |
+| --- | --- | --- |
+| `portfolio-rag-lab-overview` | [Portfolio Retrieval Lab](https://github.com/babaksoft/portfolio-rag-lab/tree/14a1c694aed4a0c7c702203ec316b5e3693d9c42) | Purpose, architecture, and implemented capabilities |
+| `support-desk-overview` | [Support Desk](https://github.com/babaksoft/support-desk/tree/89f23f7c01ac8f274092481d6f0357e8fd13d2d2) | Current product-guidance use case and OpenAI Agents SDK integration, with planned experiments identified as such |
+| `chat-buddy-chat` | [Chat Buddy](https://github.com/babaksoft/chat-buddy/tree/b2c9e91ab8563c28b79e9c4b786ed8b2a58bafe6/src/chat_buddy/chat) | Context budgeting, rolling summaries, and Chat memory |
+| `chat-buddy-characters` | [Chat Buddy](https://github.com/babaksoft/chat-buddy/tree/b2c9e91ab8563c28b79e9c4b786ed8b2a58bafe6/src/chat_buddy/characters) | Conversation modes, relationship evolution, and persona adaptations |
 
-**Documentation** — Document invocation, review and publication, and what is
-recorded for reruns.
+Adapt the donor's committed snapshot selection, explicit summary units, and
+generation steps into an offline LlamaIndex Workflows command under the
+[accepted baseline stack](../../adr/0005-use-llamaindex-for-baseline-rag.md).
+Keep GenAI Template as the workflow reference and the existing seed as a test
+fixture. Read explicit file selections from Git commits. Start with the README,
+relevant design decisions, entry points, and implementation files that support
+each unit. For large inputs, split by subsystem and retain the original evidence
+needed for synthesis. Use each unit's public commit-pinned tree as its manifest
+origin. Record the exact input paths for review. Evaluation citations use the
+generated Markdown's line numbers.
+
+**Model and budget** — Use `gpt-5.4-mini-2026-03-17` for prompt and input
+experiments. Use `gpt-6.2-sol` with medium reasoning for the final candidate,
+with access to the same pinned source evidence. Select one model per run. Adapt
+the donor's OpenAI Responses adapter to use model-specific settings and output
+limits in place of its fixed temperature. Record the requested and returned
+model IDs, reasoning settings, prompt revision, source selection, token usage,
+and output corpus version for each successful run. Sol's configured ID is an
+alias, so retain the approved artifact as the record of its exact output.
+
+Cap total Slice 2 inference at USD 10 and reserve up to USD 2 for the pilot.
+Count assembled input tokens before inference. Check the remaining budget before
+each paid request using the applicable rates, the input count, and the maximum
+billed output, including reasoning. Bound retries and account for usage across
+experiments, the pilot, and the final run. Reserve the estimated maximum cost
+when a sent request fails without returning usage.
+
+**Verification and completion** — Generate and validate a small candidate with
+the seed and a fake model. Before any paid run, review the selected files for
+[source eligibility](../../../data/portfolio/README.md#source-eligibility) and
+confirm access to the configured model. Compare Mini and Sol on the same Chat
+Buddy Characters flow using the same inputs and expected facts. Use evolution
+after a completed, selected turn. Check that the summary traces the strategy
+proposal, application validation, and replayable accepted events across modules.
+Require file references for key claims and a clear distinction between
+implemented features and plans.
+
+Stage the generated corpus and keep run records beside it. Validate the artifact
+and review all four units against the pinned sources. Check answerable cases for
+each project, including a case that requires the correct Chat Buddy area, and
+include an abstention case. Pin the cases to the approved artifact version.
+Promote the validated directory as a new immutable version for ingestion after
+review. Verify that rejected output leaves the previous valid corpus available.
+
+**Documentation** — Document command invocation, spend controls, review and
+promotion, and the run record used for reruns.
 
 ## Slice 3 — Index the corpus and retrieve evidence
 

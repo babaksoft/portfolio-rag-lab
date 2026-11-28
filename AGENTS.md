@@ -26,13 +26,16 @@
   callables and type all production class attributes. `self` and `cls` need no
   annotation. Tests, fixtures, and one-line local callbacks are exempt unless
   an annotation improves clarity or is required by the type checker.
-- Give first-party production modules, classes, and callables Google-style
-  docstrings. Trivial `__init__` methods, standard dunder methods, property
-  accessors whose attribute is already documented, one-line local callbacks,
-  and faithful protocol or superclass overrides are exempt when a docstring
-  would add no information. Omit empty `Args:` sections and omit `Returns:` for
-  `None`; under `Args:` and `Raises:`, put each name on its own line and indent
-  its description beneath it.
+- Give every first-party Python module, class, and callable a Google-style
+  docstring. This includes constructors, dunder methods, property accessors,
+  protocol methods, overrides, local callbacks, tests, and fixtures.
+- Document public class and instance attributes and all Pydantic fields in the
+  class docstring's `Attributes:` section. Document constructor parameters
+  that initialize private attributes in the `__init__` docstring's `Args:`
+  section.
+- Omit empty `Args:` sections and omit `Returns:` for `None`. Under `Args:`,
+  `Raises:`, and `Attributes:`, put each name on its own line and indent its
+  description beneath it.
 - Use single blank lines to separate logical phases within a callable.
   If a callable needs several phases or section-label comments, prefer extracting
   well-named helpers.
@@ -42,9 +45,6 @@
   persisted outside process memory, also document storage meaning, nullability
   or default behavior, lifecycle, and units or format wherever those facts are
   not obvious from the type and name.
-- Give every public Pydantic value class an `Attributes:` section documenting
-  its fields so callers get useful IntelliSense outside the defining module.
-  Internal models whose names begin with an underscore may omit it.
 - Use Pydantic models consistently for structured domain and application values
   and for boundary contracts. Prefer `ConfigDict(frozen=True, extra="forbid")`
   for value-like models unless anticipated mutation or extra attributes are
@@ -91,5 +91,7 @@
   and advanced-retrieval choices deferred until their planned stage.
 - Never add secrets. Put only names and safe placeholder values in
   `.env.example`.
+- Keep local secret files out of coding-session tool inputs and outputs. Use
+  synthetic credentials to test secret loading.
 - Do not create commits, tags, branches, pull requests, or remote resources
   unless the user explicitly requests them. Preserve unrelated user changes.

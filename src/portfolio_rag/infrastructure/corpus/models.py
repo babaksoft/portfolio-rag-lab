@@ -12,9 +12,11 @@ from pydantic import (
     model_validator,
 )
 
-_IDENTIFIER_PATTERN = r"^[a-z0-9]+(-[a-z0-9]+)*$"
-_SHA256_PATTERN = r"^[0-9a-f]{64}$"
-_NON_BLANK_PATTERN = r"\S"
+from portfolio_rag.validation import (
+    LOWER_KEBAB_CASE_PATTERN,
+    NON_BLANK_PATTERN,
+    SHA256_HEX_PATTERN,
+)
 
 
 class CorpusSource(BaseModel):
@@ -32,14 +34,14 @@ class CorpusSource(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     source_id: str = Field(
-        pattern=_IDENTIFIER_PATTERN,
+        pattern=LOWER_KEBAB_CASE_PATTERN,
         description="Stable identifier. The document is stored as <source_id>.md.",
     )
     origin_url: AnyUrl = Field(
         description="Public HTTPS location of the immutable source revision."
     )
     content_sha256: str = Field(
-        pattern=_SHA256_PATTERN,
+        pattern=SHA256_HEX_PATTERN,
         description="Lowercase hexadecimal SHA-256 digest of the exact Markdown bytes.",
     )
 
@@ -85,7 +87,7 @@ class CitationLocation(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     source_id: str = Field(
-        pattern=_IDENTIFIER_PATTERN, description="Source identifier in the corpus."
+        pattern=LOWER_KEBAB_CASE_PATTERN, description="Source identifier in the corpus."
     )
     start_line: int = Field(ge=1, description="First cited Markdown line, one-based.")
     end_line: int = Field(ge=1, description="Last cited Markdown line, inclusive.")
@@ -110,11 +112,12 @@ class EvaluationCase(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     case_id: str = Field(
-        pattern=_IDENTIFIER_PATTERN, description="Stable identifier within the dataset."
+        pattern=LOWER_KEBAB_CASE_PATTERN,
+        description="Stable identifier within the dataset.",
     )
     question: str = Field(
         min_length=1,
-        pattern=_NON_BLANK_PATTERN,
+        pattern=NON_BLANK_PATTERN,
         description="Question presented to the assistant.",
     )
     expected_outcome: Literal["answer", "abstain"] = Field(
@@ -131,7 +134,7 @@ class EvaluationCase(BaseModel):
     @classmethod
     def validate_required_facts(cls, values: tuple[str, ...]) -> tuple[str, ...]:
         """Require non-blank text for each fact."""
-        if any(re.search(_NON_BLANK_PATTERN, value) is None for value in values):
+        if any(re.search(NON_BLANK_PATTERN, value) is None for value in values):
             raise ValueError("required facts must contain non-blank text")
         return values
 
@@ -164,7 +167,7 @@ class EvaluationDataset(BaseModel):
         ge=1, le=1, description="Evaluation dataset format version."
     )
     corpus_version: str = Field(
-        pattern=_SHA256_PATTERN,
+        pattern=SHA256_HEX_PATTERN,
         description="Lowercase hexadecimal SHA-256 hash of the canonical manifest.",
     )
     cases: tuple[EvaluationCase, ...] = Field(

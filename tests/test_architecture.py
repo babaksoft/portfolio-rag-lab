@@ -37,18 +37,22 @@ LOGGING_HELPER = (
 DEPENDENCIES = {
     "": ("portfolio_rag.observability",),
     "observability": (),
+    "validation": (),
     "domain": ("pydantic",),
-    "application": ("portfolio_rag.domain", "pydantic"),
+    "application": ("portfolio_rag.domain", "portfolio_rag.validation", "pydantic"),
     "infrastructure": (
         "portfolio_rag.domain",
         *APPLICATION_CONTRACTS,
         *ANSWER_VALUE,
+        "portfolio_rag.application.services.GenerationResponse",
+        "portfolio_rag.validation",
         *LOGGING_HELPER,
     ),
     "api": (
         "portfolio_rag.application.services",
         *APPLICATION_CONTRACTS,
         *HTTP_DOMAIN_TYPES,
+        "portfolio_rag.validation",
         *LOGGING_HELPER,
         "fastapi",
         "starlette",

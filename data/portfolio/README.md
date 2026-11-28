@@ -47,3 +47,74 @@ uv run python scripts/validate_corpus.py data/portfolio/seed-v1/corpus data/port
 
 The command checks artifact integrity and that every expected citation resolves
 in the pinned corpus. Review source eligibility and factual support separately.
+
+## Generate and review the showcase corpus
+
+[The source selection](showcase-sources.json) lists the four summary units, full
+commit IDs, public origins, and exact input paths. Keep the three repositories
+as sibling checkouts or pass `--repositories` with their common parent. The
+command reads committed files from the pinned Git trees. Review those files
+for publication eligibility before sending them to OpenAI.
+
+```bash
+uv run --group corpus python scripts/generate_corpus.py inspect
+```
+
+Set `OPENAI_API_KEY` in the checkout's `.env` file using an editor. Git ignores
+the file, so keep its access limited to your local account. The `generate`
+command loads the key at runtime. A key already supplied by the process
+environment takes precedence. Compare the two models using the same Characters
+selection. Each run writes a separate candidate and reports its path and corpus
+version.
+
+```bash
+uv run --group corpus python scripts/generate_corpus.py generate \
+  --unit chat-buddy-characters --pilot --confirm-source-review
+uv run --group corpus python scripts/generate_corpus.py generate \
+  --unit chat-buddy-characters --pilot --model gpt-6.2-sol --confirm-source-review
+```
+
+Check both results against the pinned implementation. Trace the evolution
+strategy proposal after a completed, selected turn, deterministic application
+validation, and how accepted events support replay. Verify the cited file paths
+and the distinction between implemented behavior and plans. To experiment with
+a different explicit file list or focus, pass `--selection` with a copy of the
+selection JSON. Keep the source selection the same for a model comparison.
+
+After the pilot, generate all four units with the final model.
+
+```bash
+uv run --group corpus python scripts/generate_corpus.py generate \
+  --model gpt-6.2-sol --confirm-source-review
+```
+
+`inspect` reports bytes locally. Generation uses the Responses API to count
+the actual prompt, and caps each request at 272,000 input and 8,000 billed
+output tokens. Narrow overly large selections around the relevant subsystems.
+The local `.corpus-work/budget.sqlite` ledger shares a USD 10 limit across runs
+from this checkout, with USD 2 available to the pilot within that limit. Keep
+the ledger throughout Slice 2. The command reserves the estimated maximum at
+Standard uncached rates before sending inference and reconciles reported usage
+afterward. An attempt without reported usage keeps its reservation.
+
+Review every generated unit against its pinned inputs. Then author
+`evaluation.json` for the exact candidate and verify answerable cases for the
+Lab, Support Desk, and both Chat Buddy areas, plus an abstention case. For
+example, verify that the case about rolling summaries and user-managed memory
+in Chat cites the Chat unit, and that a case about replayable persona evolution
+cites Characters. Citation ranges belong to the candidate Markdown. The pinned
+Git URL identifies the upstream source tree for review.
+
+```bash
+uv run python scripts/validate_corpus.py "$candidate/corpus" "$evaluation"
+uv run --group corpus python scripts/generate_corpus.py promote \
+  "$candidate" "$evaluation" --version "$approved_version"
+```
+
+Use the command's reported candidate directory and the reviewed version and
+evaluation path for these values. Promotion validates the corpus, run record,
+and evaluation again, then publishes `data/portfolio/releases/<version>/`.
+The `corpus/` subdirectory is the input to ingestion. `run.json` beside it
+records the source selections, prompt revision, requested and returned model
+IDs, reasoning settings, token usage, and corpus version. Keep the approved
+bytes for reproduction because `gpt-6.2-sol` is an alias.
